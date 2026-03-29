@@ -2,7 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 
 const ROWS = 6;
 const COLS = 22;
+const CELL_COUNT = ROWS * COLS;
 const CHARS = " ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890!@#$()-+&=;:'\"%,./?°".split("");
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+const NUMBERS = "1234567890".split("");
+const SYMBOLS = "!@#$()-+&=;:'\"%,./?°".split("");
 const COLOR_MAP = {
   "{R}": "#E8342C",
   "{O}": "#EF7D24",
@@ -12,10 +16,11 @@ const COLOR_MAP = {
   "{V}": "#8B3FB8",
   "{W}": "#EEEAE2",
 };
-const COLOR_KEYS = Object.keys(COLOR_MAP);
+const STORAGE_KEY = "flippybord-state-v3";
+const SAVED_SCREENS_KEY = "flippybord-saved-screens-v1";
+const DEFAULT_MESSAGE = "YOUR STORY HERE\nCLICK A TILE\nAND START TYPING";
 const STAGGER_COL = 32;
 const STAGGER_ROW = 50;
-const DEFAULT_MESSAGE = "FLIPPY BORD\n{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}\nREADY TO DISPLAY";
 
 const BACKGROUNDS = [
   {
@@ -23,42 +28,69 @@ const BACKGROUNDS = [
     label: "Gallery Plaster",
     css: {
       background:
-        "radial-gradient(circle at top, rgba(255,255,255,0.22), transparent 28%), linear-gradient(180deg, #f0e4d3 0%, #ddcfba 100%)",
+        "radial-gradient(circle at top, rgba(255,255,255,0.25), transparent 28%), linear-gradient(180deg, #f3e3cb 0%, #dcc5a8 100%)",
     },
   },
   {
-    id: "white-brick",
-    label: "White Brick",
+    id: "sunlit-brick",
+    label: "Sunlit Brick",
     css: {
-      backgroundColor: "#e2ded6",
+      backgroundColor: "#e9ded1",
       backgroundImage:
-        "repeating-linear-gradient(0deg, transparent, transparent 29px, #ccc8c0 29px, #ccc8c0 31px), repeating-linear-gradient(90deg, transparent, transparent 59px, #ccc8c0 59px, #ccc8c0 61px)",
-      backgroundSize: "122px 31px",
+        "repeating-linear-gradient(0deg, transparent, transparent 27px, #cfc1b3 27px, #cfc1b3 29px), repeating-linear-gradient(90deg, transparent, transparent 55px, #cfc1b3 55px, #cfc1b3 57px)",
+      backgroundSize: "114px 29px",
     },
   },
   {
-    id: "dark-wall",
-    label: "Dark Wall",
+    id: "night-studio",
+    label: "Night Studio",
     css: {
       background:
-        "radial-gradient(circle at top, rgba(255,255,255,0.05), transparent 26%), linear-gradient(170deg, #171717 0%, #0a0a0a 100%)",
+        "radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 26%), linear-gradient(170deg, #171717 0%, #090909 100%)",
     },
   },
   {
-    id: "walnut",
-    label: "Walnut",
+    id: "walnut-panel",
+    label: "Walnut Panel",
     css: {
       background:
-        "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0) 20%), repeating-linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 2px, transparent 2px, transparent 84px), linear-gradient(175deg, #4a3728 0%, #3d2e22 40%, #332518 100%)",
+        "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 18%), repeating-linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 2px, transparent 2px, transparent 84px), linear-gradient(175deg, #4a3728 0%, #3b2b1e 40%, #2e2218 100%)",
     },
   },
   {
-    id: "concrete",
-    label: "Concrete",
+    id: "stone-loft",
+    label: "Stone Loft",
     css: {
       background:
-        "radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 24%), linear-gradient(180deg, #979289 0%, #8a857e 100%)",
+        "radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 24%), linear-gradient(180deg, #9b958c 0%, #888178 100%)",
     },
+  },
+];
+
+const FEATURED_SCENES = [
+  {
+    id: "lobby",
+    name: "Lobby Welcome",
+    blurb: "Hospitality arrivals and concierge moments.",
+    message: "GOOD EVENING\nCHECK IN AT 4\nLOBBY BAR OPEN",
+    background: "gallery-plaster",
+    frame: "black",
+  },
+  {
+    id: "launch",
+    name: "Launch Night",
+    blurb: "Retail drops, openings, and release countdowns.",
+    message: "LAUNCH NIGHT\nDOORS AT 8 PM\nSEE YOU INSIDE",
+    background: "night-studio",
+    frame: "black",
+  },
+  {
+    id: "home",
+    name: "Home Ritual",
+    blurb: "A calmer board for kitchens, hallways, and studios.",
+    message: "DINNER AT 7\nDOG WALK AT 8\nMOVIE NIGHT",
+    background: "walnut-panel",
+    frame: "white",
   },
 ];
 
@@ -183,15 +215,23 @@ const audioEngine = (() => {
   };
 })();
 
-function getCharIndex(character) {
-  const matchIndex = CHARS.indexOf(character.toUpperCase());
-  return matchIndex >= 0 ? matchIndex : 0;
+function createCell(char = " ", color = null) {
+  return { char, color };
 }
 
 function emptyGrid() {
   return Array.from({ length: ROWS }, () =>
-    Array.from({ length: COLS }, () => ({ char: " ", color: null })),
+    Array.from({ length: COLS }, () => createCell()),
   );
+}
+
+function cloneGrid(grid) {
+  return grid.map((row) => row.map((cell) => ({ ...cell })));
+}
+
+function getCharIndex(character) {
+  const matchIndex = CHARS.indexOf(character.toUpperCase());
+  return matchIndex >= 0 ? matchIndex : 0;
 }
 
 function centerMessage(text) {
@@ -211,7 +251,7 @@ function centerMessage(text) {
     while (cursor < line.length) {
       let colorToken = null;
 
-      for (const key of COLOR_KEYS) {
+      for (const key of Object.keys(COLOR_MAP)) {
         if (line.slice(cursor, cursor + key.length).toUpperCase() === key) {
           colorToken = key;
           break;
@@ -219,10 +259,10 @@ function centerMessage(text) {
       }
 
       if (colorToken) {
-        tokens.push({ char: " ", color: COLOR_MAP[colorToken] });
+        tokens.push(createCell(" ", COLOR_MAP[colorToken]));
         cursor += colorToken.length;
       } else {
-        tokens.push({ char: line[cursor], color: null });
+        tokens.push(createCell(line[cursor].toUpperCase(), null));
         cursor += 1;
       }
     }
@@ -241,33 +281,77 @@ function centerMessage(text) {
   return grid;
 }
 
-function formatTimePreset() {
-  return new Date().toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: true,
-  });
+function toFlatIndex(position) {
+  return position.row * COLS + position.col;
+}
+
+function fromFlatIndex(index) {
+  return {
+    row: Math.floor(index / COLS),
+    col: index % COLS,
+  };
+}
+
+function advancePosition(position) {
+  const nextIndex = Math.min(CELL_COUNT - 1, toFlatIndex(position) + 1);
+  return fromFlatIndex(nextIndex);
+}
+
+function retreatPosition(position) {
+  const nextIndex = Math.max(0, toFlatIndex(position) - 1);
+  return fromFlatIndex(nextIndex);
+}
+
+function movePosition(position, rowDelta, colDelta) {
+  return {
+    row: Math.min(ROWS - 1, Math.max(0, position.row + rowDelta)),
+    col: Math.min(COLS - 1, Math.max(0, position.col + colDelta)),
+  };
+}
+
+function nextLinePosition(position) {
+  return {
+    row: Math.min(ROWS - 1, position.row + 1),
+    col: 0,
+  };
+}
+
+function setGridCell(grid, position, cell) {
+  const nextGrid = cloneGrid(grid);
+  nextGrid[position.row][position.col] = { ...cell };
+  return nextGrid;
+}
+
+function sanitizeGrid(candidate) {
+  if (!Array.isArray(candidate) || candidate.length !== ROWS) {
+    return centerMessage(DEFAULT_MESSAGE);
+  }
+
+  return candidate.map((row) =>
+    Array.from({ length: COLS }, (_, columnIndex) => {
+      const sourceCell = Array.isArray(row) ? row[columnIndex] : null;
+
+      if (!sourceCell || typeof sourceCell !== "object") {
+        return createCell();
+      }
+
+      const nextChar =
+        typeof sourceCell.char === "string" && CHARS.includes(sourceCell.char.toUpperCase())
+          ? sourceCell.char.toUpperCase()
+          : " ";
+      const nextColor = typeof sourceCell.color === "string" ? sourceCell.color : null;
+
+      return createCell(nextColor ? " " : nextChar, nextColor);
+    }),
+  );
 }
 
 function parseBoolean(value, fallback = false) {
-  if (value === null) {
+  if (value === null || value === undefined) {
     return fallback;
   }
 
   return value === "1" || value === "true";
-}
-
-function readStoredState() {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
-  try {
-    const raw = window.localStorage.getItem("flippybord-state");
-    return raw ? JSON.parse(raw) : null;
-  } catch {
-    return null;
-  }
 }
 
 function sanitizeBackground(id) {
@@ -278,13 +362,74 @@ function sanitizeFrame(value) {
   return value === "white" ? "white" : "black";
 }
 
+function encodeData(payload) {
+  if (typeof window === "undefined") {
+    return "";
+  }
+
+  const bytes = new TextEncoder().encode(JSON.stringify(payload));
+  let binary = "";
+  bytes.forEach((byte) => {
+    binary += String.fromCharCode(byte);
+  });
+  return window.btoa(binary);
+}
+
+function decodeData(value) {
+  if (!value || typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const binary = window.atob(value);
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    const json = new TextDecoder().decode(bytes);
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function readStoredState() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+function readSavedScreens() {
+  if (typeof window === "undefined") {
+    return [];
+  }
+
+  try {
+    const raw = window.localStorage.getItem(SAVED_SCREENS_KEY);
+    return raw ? JSON.parse(raw).map((screen) => ({ ...screen, grid: sanitizeGrid(screen.grid) })) : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildFeaturedScene(scene) {
+  return {
+    ...scene,
+    grid: centerMessage(scene.message),
+  };
+}
+
 function readInitialState() {
   const fallback = {
-    message: DEFAULT_MESSAGE,
+    grid: centerMessage(DEFAULT_MESSAGE),
     background: BACKGROUNDS[0].id,
     frame: "black",
     sound: true,
-    hover: false,
+    hover: true,
     present: false,
   };
 
@@ -293,29 +438,23 @@ function readInitialState() {
   }
 
   const params = new URLSearchParams(window.location.search);
-  const hasQueryState =
-    params.has("message") ||
-    params.has("bg") ||
-    params.has("frame") ||
-    params.has("sound") ||
-    params.has("hover") ||
-    params.has("display");
   const stored = readStoredState();
-  const source = hasQueryState ? null : stored;
+  const queryPayload = decodeData(params.get("board"));
+  const gridFromStoredMessage = stored?.message ? centerMessage(stored.message) : null;
 
   return {
-    message: params.get("message") ?? source?.message ?? fallback.message,
-    background: sanitizeBackground(params.get("bg") ?? source?.background ?? fallback.background),
-    frame: sanitizeFrame(params.get("frame") ?? source?.frame ?? fallback.frame),
-    sound: parseBoolean(params.get("sound"), source?.sound ?? fallback.sound),
-    hover: parseBoolean(params.get("hover"), source?.hover ?? fallback.hover),
-    present: parseBoolean(params.get("display"), source?.present ?? fallback.present),
+    grid: sanitizeGrid(queryPayload?.grid ?? stored?.grid ?? gridFromStoredMessage ?? fallback.grid),
+    background: sanitizeBackground(params.get("bg") ?? stored?.background ?? fallback.background),
+    frame: sanitizeFrame(params.get("frame") ?? stored?.frame ?? fallback.frame),
+    sound: parseBoolean(params.get("sound"), stored?.sound ?? fallback.sound),
+    hover: parseBoolean(params.get("hover"), stored?.hover ?? fallback.hover),
+    present: parseBoolean(params.get("display"), stored?.present ?? fallback.present),
   };
 }
 
-function buildShareUrl({ message, background, frame, sound, hover, present }) {
+function buildShareUrl({ grid, background, frame, sound, hover, present }) {
   const url = new URL(window.location.href);
-  url.searchParams.set("message", message);
+  url.searchParams.set("board", encodeData({ grid }));
   url.searchParams.set("bg", background);
   url.searchParams.set("frame", frame);
   url.searchParams.set("sound", sound ? "1" : "0");
@@ -324,7 +463,52 @@ function buildShareUrl({ message, background, frame, sound, hover, present }) {
   return url.toString();
 }
 
-function SplitFlap({ targetChar, delay, color, hoverActive }) {
+function normalizeTypedCharacter(key) {
+  if (key.length !== 1) {
+    return null;
+  }
+
+  if (key === " ") {
+    return " ";
+  }
+
+  const upper = key.toUpperCase();
+  return CHARS.includes(upper) ? upper : null;
+}
+
+function getPreviewLines(grid) {
+  return grid
+    .map((row) => row.map((cell) => (cell.color ? "■" : cell.char)).join("").trimEnd())
+    .filter(Boolean)
+    .slice(0, 2);
+}
+
+function formatTimestamp(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "Just now";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function describeCell(cell) {
+  if (!cell) {
+    return "Blank";
+  }
+
+  if (cell.color) {
+    const colorEntry = Object.entries(COLOR_MAP).find(([, value]) => value === cell.color);
+    return colorEntry ? `Signal ${colorEntry[0]}` : "Color tile";
+  }
+
+  return cell.char === " " ? "Blank" : cell.char;
+}
+
+function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, label }) {
   const [currentChar, setCurrentChar] = useState(" ");
   const [currentColor, setCurrentColor] = useState(null);
   const [flipping, setFlipping] = useState(false);
@@ -514,7 +698,20 @@ function SplitFlap({ targetChar, delay, color, hoverActive }) {
   };
 
   return (
-    <div className="flap-unit" onMouseEnter={handleHover}>
+    <div
+      className={`flap-unit${selected ? " is-selected" : ""}`}
+      onMouseEnter={handleHover}
+      onClick={onSelect}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onSelect?.();
+        }
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label={label}
+    >
       <div className={`flap-box${flipping ? " flipping" : ""}`} style={flipStyle}>
         <div className="flap bottom-new" style={queuedColor ? { background: queuedColor, filter: "brightness(0.85)" } : {}}>
           {!queuedColor && <span className="fc bc">{visibleNextChar}</span>}
@@ -552,38 +749,120 @@ function ToggleIcon({ enabled }) {
   );
 }
 
+function ComposerModal({ position, cell, onClose, onPickCharacter, onPickBlank, onPickColor }) {
+  const positionLabel = `Row ${position.row + 1}, Tile ${position.col + 1}`;
+
+  return (
+    <div className="modal-backdrop" onClick={onClose}>
+      <div className="composer-modal" onClick={(event) => event.stopPropagation()}>
+        <div className="composer-header">
+          <div>
+            <p className="eyebrow">Tile Composer</p>
+            <h3>{positionLabel}</h3>
+          </div>
+          <button className="mini-icon-button" onClick={onClose} aria-label="Close tile composer">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="composer-preview">
+          <div className="composer-tile">
+            <div className="composer-mini composer-mini-top" style={cell.color ? { background: cell.color } : {}}>
+              {!cell.color && <span>{cell.char === " " ? "\u00A0" : cell.char}</span>}
+            </div>
+            <div className="composer-mini composer-mini-bottom" style={cell.color ? { background: cell.color } : {}}>
+              {!cell.color && <span>{cell.char === " " ? "\u00A0" : cell.char}</span>}
+            </div>
+          </div>
+          <div className="composer-copy">
+            <strong>{describeCell(cell)}</strong>
+            <span>Keyboard typing is live. Each choice advances the cursor to the next flap.</span>
+          </div>
+        </div>
+
+        <div className="composer-section">
+          <div className="composer-section-title">
+            <span>Letters</span>
+          </div>
+          <div className="palette-grid letters">
+            {LETTERS.map((character) => (
+              <button
+                key={character}
+                className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
+                onClick={() => onPickCharacter(character)}
+              >
+                {character}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="composer-section">
+          <div className="composer-section-title">
+            <span>Numbers & symbols</span>
+          </div>
+          <div className="palette-grid compact">
+            {[" ", ...NUMBERS, ...SYMBOLS].map((character) => (
+              <button
+                key={character === " " ? "blank" : character}
+                className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
+                onClick={() => (character === " " ? onPickBlank() : onPickCharacter(character))}
+              >
+                {character === " " ? "Blank" : character}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="composer-section">
+          <div className="composer-section-title">
+            <span>Signal tiles</span>
+          </div>
+          <div className="color-palette">
+            {Object.entries(COLOR_MAP).map(([key, value]) => (
+              <button
+                key={key}
+                className={`color-picker${cell.color === value ? " active" : ""}`}
+                style={{ background: value }}
+                onClick={() => onPickColor(value)}
+                title={key}
+              >
+                {key[1]}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function DigitalVestaboard() {
   const initialState = useMemo(readInitialState, []);
-  const [displayText, setDisplayText] = useState(initialState.message);
-  const [inputText, setInputText] = useState(initialState.message);
+  const featuredScenes = useMemo(() => FEATURED_SCENES.map(buildFeaturedScene), []);
+  const [grid, setGrid] = useState(initialState.grid);
   const [bgId, setBgId] = useState(initialState.background);
   const [frameStyle, setFrameStyle] = useState(initialState.frame);
   const [soundOn, setSoundOn] = useState(initialState.sound);
   const [hoverMode, setHoverMode] = useState(initialState.hover);
   const [presentMode, setPresentMode] = useState(initialState.present);
-  const [editMode, setEditMode] = useState(false);
+  const [savedScreens, setSavedScreens] = useState(() => readSavedScreens());
+  const [activeCell, setActiveCell] = useState(null);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [saveName, setSaveName] = useState("");
   const [toast, setToast] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const textareaRef = useRef(null);
 
-  const grid = useMemo(() => centerMessage(displayText), [displayText]);
+  const boardStageRef = useRef(null);
+  const savedSectionRef = useRef(null);
+
   const background = BACKGROUNDS.find((entry) => entry.id === bgId) || BACKGROUNDS[0];
-  const isDarkWall = ["dark-wall", "walnut"].includes(bgId);
-  const colorEntries = Object.entries(COLOR_MAP);
-
-  const presets = useMemo(
-    () => [
-      { label: "WELCOME", text: "WELCOME HOME\nJAMES" },
-      { label: "STATUS", text: "SYSTEM STATUS\n{G}{G}{G}{G}{G}{G}{G}{G}\nALL SYSTEMS GO" },
-      { label: "QUOTE", text: "THE BEST WAY TO\nPREDICT THE FUTURE\nIS TO BUILD IT" },
-      {
-        label: "RAINBOW",
-        text: "{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{V}\n{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}\n{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}\n{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}\n{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}\n{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}{G}{B}{V}{R}{O}{Y}",
-      },
-      { label: "TIME", text: formatTimePreset, dynamic: true },
-    ],
-    [],
-  );
+  const isDarkWall = ["night-studio", "walnut-panel"].includes(bgId);
+  const selectedCell = activeCell ? grid[activeCell.row][activeCell.col] : null;
+  const selectedLabel = activeCell ? `R${activeCell.row + 1} · C${activeCell.col + 1}` : "No tile selected";
 
   useEffect(() => {
     audioEngine.setEnabled(soundOn);
@@ -594,16 +873,9 @@ export default function DigitalVestaboard() {
       return undefined;
     }
 
-    const timer = window.setTimeout(() => setToast(""), 2200);
+    const timer = window.setTimeout(() => setToast(""), 2400);
     return () => window.clearTimeout(timer);
   }, [toast]);
-
-  useEffect(() => {
-    if (editMode && textareaRef.current) {
-      textareaRef.current.focus();
-      textareaRef.current.select();
-    }
-  }, [editMode]);
 
   useEffect(() => {
     const updateFullscreenState = () => {
@@ -616,27 +888,12 @@ export default function DigitalVestaboard() {
   }, []);
 
   useEffect(() => {
-    if (!presentMode) {
-      return undefined;
-    }
-
-    const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        setPresentMode(false);
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [presentMode]);
-
-  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
 
     const serializedState = {
-      message: displayText,
+      grid,
       background: bgId,
       frame: frameStyle,
       sound: soundOn,
@@ -644,32 +901,272 @@ export default function DigitalVestaboard() {
       present: presentMode,
     };
 
-    window.localStorage.setItem("flippybord-state", JSON.stringify(serializedState));
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializedState));
     window.history.replaceState({}, "", buildShareUrl(serializedState));
-  }, [bgId, displayText, frameStyle, hoverMode, presentMode, soundOn]);
+  }, [bgId, frameStyle, grid, hoverMode, presentMode, soundOn]);
 
-  const handleSend = () => {
-    setDisplayText(inputText);
-    setEditMode(false);
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(SAVED_SCREENS_KEY, JSON.stringify(savedScreens));
+  }, [savedScreens]);
+
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        if (composerOpen || activeCell) {
+          event.preventDefault();
+          setComposerOpen(false);
+          setActiveCell(null);
+          return;
+        }
+
+        if (presentMode) {
+          event.preventDefault();
+          setPresentMode(false);
+        }
+        return;
+      }
+
+      if (!activeCell) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (event.metaKey || event.ctrlKey || event.altKey) {
+        return;
+      }
+
+      if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setActiveCell(movePosition(activeCell, 0, 1));
+        setComposerOpen(true);
+        return;
+      }
+
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setActiveCell(movePosition(activeCell, 0, -1));
+        setComposerOpen(true);
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setActiveCell(movePosition(activeCell, -1, 0));
+        setComposerOpen(true);
+        return;
+      }
+
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setActiveCell(movePosition(activeCell, 1, 0));
+        setComposerOpen(true);
+        return;
+      }
+
+      if (event.key === "Tab") {
+        event.preventDefault();
+        setActiveCell(event.shiftKey ? retreatPosition(activeCell) : advancePosition(activeCell));
+        setComposerOpen(true);
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+        setActiveCell(nextLinePosition(activeCell));
+        setComposerOpen(true);
+        return;
+      }
+
+      if (event.key === "Delete") {
+        event.preventDefault();
+        setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell()));
+        return;
+      }
+
+      if (event.key === "Backspace") {
+        event.preventDefault();
+
+        if (selectedCell && (selectedCell.color || selectedCell.char !== " ")) {
+          setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell()));
+          return;
+        }
+
+        const previousCell = retreatPosition(activeCell);
+        setGrid((currentGrid) => setGridCell(currentGrid, previousCell, createCell()));
+        setActiveCell(previousCell);
+        setComposerOpen(true);
+        return;
+      }
+
+      const character = normalizeTypedCharacter(event.key);
+      if (!character) {
+        return;
+      }
+
+      event.preventDefault();
+      setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(character, null)));
+      setActiveCell(advancePosition(activeCell));
+      setComposerOpen(true);
+    };
+
+    const handlePaste = (event) => {
+      if (!activeCell) {
+        return;
+      }
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)
+      ) {
+        return;
+      }
+
+      const pastedText = event.clipboardData?.getData("text");
+      if (!pastedText) {
+        return;
+      }
+
+      event.preventDefault();
+
+      let cursor = activeCell;
+      setGrid((currentGrid) => {
+        const nextGrid = cloneGrid(currentGrid);
+
+        for (const character of pastedText.replace(/\r/g, "")) {
+          if (character === "\n") {
+            cursor = nextLinePosition(cursor);
+            continue;
+          }
+
+          const normalized = normalizeTypedCharacter(character);
+          if (!normalized) {
+            continue;
+          }
+
+          nextGrid[cursor.row][cursor.col] = createCell(normalized, null);
+          cursor = advancePosition(cursor);
+        }
+
+        return nextGrid;
+      });
+      setActiveCell(cursor);
+      setComposerOpen(true);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("paste", handlePaste);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("paste", handlePaste);
+    };
+  }, [activeCell, composerOpen, presentMode, selectedCell]);
+
+  const selectTile = (row, col) => {
+    setActiveCell({ row, col });
+    setComposerOpen(true);
   };
 
-  const handleClear = () => {
-    setDisplayText("");
-    setInputText("");
-    setEditMode(false);
+  const closeComposer = () => {
+    setComposerOpen(false);
+    setActiveCell(null);
   };
 
-  const handlePreset = (preset) => {
-    const nextText = preset.dynamic ? preset.text() : preset.text;
-    setDisplayText(nextText);
-    setInputText(nextText);
-    setEditMode(false);
+  const insertCharacterAtCursor = (character) => {
+    if (!activeCell) {
+      return;
+    }
+
+    setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(character, null)));
+    setActiveCell(advancePosition(activeCell));
+    setComposerOpen(true);
+  };
+
+  const insertColorAtCursor = (color) => {
+    if (!activeCell) {
+      return;
+    }
+
+    setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(" ", color)));
+    setActiveCell(advancePosition(activeCell));
+    setComposerOpen(true);
+  };
+
+  const clearBoard = () => {
+    setGrid(emptyGrid());
+    setActiveCell(null);
+    setComposerOpen(false);
+  };
+
+  const loadScene = (scene) => {
+    setGrid(cloneGrid(scene.grid));
+    setBgId(scene.background);
+    setFrameStyle(scene.frame);
+    setPresentMode(false);
+    setActiveCell(null);
+    setComposerOpen(false);
+    setToast(`${scene.name} loaded`);
+  };
+
+  const saveScreen = () => {
+    const name = saveName.trim() || `Screen ${savedScreens.length + 1}`;
+    const nextScreen = {
+      id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
+      name,
+      background: bgId,
+      frame: frameStyle,
+      createdAt: new Date().toISOString(),
+      grid,
+    };
+
+    setSavedScreens((currentScreens) => [nextScreen, ...currentScreens].slice(0, 8));
+    setSaveName("");
+    setToast(`${name} saved`);
+  };
+
+  const loadSavedScreen = (screen) => {
+    setGrid(cloneGrid(screen.grid));
+    setBgId(sanitizeBackground(screen.background));
+    setFrameStyle(sanitizeFrame(screen.frame));
+    setPresentMode(false);
+    setActiveCell(null);
+    setComposerOpen(false);
+    setToast(`${screen.name} loaded`);
+  };
+
+  const deleteSavedScreen = (screenId) => {
+    setSavedScreens((currentScreens) => currentScreens.filter((screen) => screen.id !== screenId));
+  };
+
+  const scrollToBoard = () => {
+    boardStageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+
+  const scrollToSavedScreens = () => {
+    savedSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  const startEditing = () => {
+    scrollToBoard();
+    setActiveCell({ row: 1, col: 0 });
+    setComposerOpen(true);
   };
 
   const handleCopyLink = async () => {
     try {
       const url = buildShareUrl({
-        message: displayText,
+        grid,
         background: bgId,
         frame: frameStyle,
         sound: soundOn,
@@ -697,129 +1194,194 @@ export default function DigitalVestaboard() {
 
   const togglePresentMode = () => {
     setPresentMode((current) => !current);
-    setEditMode(false);
+    setComposerOpen(false);
   };
 
+  const boardMarkup = (
+    <div className={`board-stage-shell${presentMode ? " is-present" : ""}`} ref={boardStageRef}>
+      <div className="board-stage-wall" style={background.css} />
+      <div className="board-stage-overlay" />
+
+      {!presentMode && (
+        <>
+          <div className="floating-badge floating-badge-left">Interactive demo board</div>
+          <div className="floating-badge floating-badge-right">Hover mode on</div>
+        </>
+      )}
+
+      {presentMode && (
+        <div className="present-toolbar">
+          <button className="glass-button" onClick={togglePresentMode}>
+            Back to Site
+          </button>
+          <button className="glass-button" onClick={handleFullscreenToggle}>
+            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          </button>
+          <button className="glass-button" onClick={handleCopyLink}>
+            Copy Link
+          </button>
+        </div>
+      )}
+
+      <div className="board-stage-content">
+        {!presentMode && (
+          <div className="board-stage-copy">
+            <p className="eyebrow">Live board editor</p>
+            <h2>Click any tile. Type immediately. Save the screen when it feels right.</h2>
+            <p>
+              The board is the product. Every flap is clickable, keyboard capture advances tile by tile, and saved scenes let you build a library for home, retail, and events.
+            </p>
+          </div>
+        )}
+
+        <div className={`vb-frame frame-${frameStyle}`}>
+          <div className="vb-board-body">
+            <div className="vb-board" role="img" aria-label="Interactive digital split flap board">
+              {grid.map((row, rowIndex) => (
+                <div className="vb-row" key={rowIndex}>
+                  {row.map((cell, columnIndex) => (
+                    <SplitFlap
+                      key={`${rowIndex}-${columnIndex}`}
+                      targetChar={cell.char}
+                      color={cell.color}
+                      delay={columnIndex * STAGGER_COL + rowIndex * STAGGER_ROW}
+                      hoverActive={hoverMode}
+                      selected={activeCell?.row === rowIndex && activeCell?.col === columnIndex}
+                      onSelect={() => selectTile(rowIndex, columnIndex)}
+                      label={`Row ${rowIndex + 1} column ${columnIndex + 1} ${describeCell(cell)}`}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {!presentMode && (
+          <div className="board-instruction-bar">
+            <span>{selectedLabel}</span>
+            <span>Click a tile or press paste after selecting a start point.</span>
+            <span>{hoverMode ? "Cursor ripple active" : "Cursor ripple paused"}</span>
+          </div>
+        )}
+      </div>
+
+      {presentMode && (
+        <div className="present-exit-dock">
+          <button className="present-exit-button" onClick={togglePresentMode}>
+            Back to Site
+          </button>
+          <span>Press Esc to exit display mode.</span>
+        </div>
+      )}
+    </div>
+  );
+
+  if (presentMode) {
+    return (
+      <div className="app-shell is-present">
+        {boardMarkup}
+        {composerOpen && activeCell && selectedCell && (
+          <ComposerModal
+            position={activeCell}
+            cell={selectedCell}
+            onClose={closeComposer}
+            onPickCharacter={insertCharacterAtCursor}
+            onPickBlank={() => insertCharacterAtCursor(" ")}
+            onPickColor={insertColorAtCursor}
+          />
+        )}
+        {toast && <div className="toast">{toast}</div>}
+      </div>
+    );
+  }
+
   return (
-    <div className={`app-shell${presentMode ? " is-present" : ""}`}>
+    <div className="app-shell">
       <div className="ambient-glow ambient-glow-left" />
       <div className="ambient-glow ambient-glow-right" />
 
-      {!presentMode && (
-        <header className="app-header">
+      <header className="site-nav">
+        <div className="brand-lockup">
+          <span className="brand-mark">FB</span>
           <div>
-            <p className="eyebrow">Digital split-flap display</p>
-            <h1>Flippy Bord</h1>
-            <p className="lede">
-              A Vestaboard-inspired browser display with responsive layouts, presentation mode, and shareable state for TV, phone, or desktop screens.
-            </p>
+            <strong>Flippy Bord</strong>
+            <span>Digital split-flap access</span>
           </div>
-        </header>
-      )}
+        </div>
 
-      <main className="studio-shell">
-        <section className="studio-stage">
-          <div className="stage-wall" style={background.css} />
-          <div className="stage-content">
-            {presentMode && (
-              <div className="present-toolbar">
-                <button className="ghost-button" onClick={togglePresentMode}>
-                  Back to Studio
-                </button>
-                <button className="ghost-button" onClick={handleFullscreenToggle}>
-                  {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                </button>
-                <button className="ghost-button" onClick={handleCopyLink}>
-                  Copy Link
-                </button>
+        <div className="nav-actions">
+          <button className="ghost-button" onClick={scrollToSavedScreens}>
+            Saved Screens
+          </button>
+          <button className="primary-button" onClick={startEditing}>
+            Launch Demo Board
+          </button>
+        </div>
+      </header>
+
+      <main className="landing-shell">
+        <section className="hero-grid">
+          <div className="hero-copy">
+            <p className="eyebrow">Vestaboard-inspired browser signage</p>
+            <h1>Sell the ritual of a real split-flap board, without buying the hardware first.</h1>
+            <p className="hero-text">
+              Flippy Bord turns any TV, browser, or phone into a premium split-flap experience. Demo the board live, click into any tile, and compose letter by letter with the same satisfying flip-through behavior people love on a physical board.
+            </p>
+
+            <div className="hero-actions">
+              <button className="primary-button" onClick={startEditing}>
+                Start Editing Live
+              </button>
+              <button className="secondary-button" onClick={togglePresentMode}>
+                Display Fullscreen
+              </button>
+            </div>
+
+            <div className="metric-strip">
+              <div className="metric-card">
+                <strong>132</strong>
+                <span>Clickable flaps</span>
               </div>
-            )}
-
-            {presentMode && (
-              <div className="present-exit-dock">
-                <button className="present-exit-button" onClick={togglePresentMode}>
-                  Back to Studio
-                </button>
-                <span>Press Esc on desktop to leave display mode.</span>
+              <div className="metric-card">
+                <strong>Tile-first</strong>
+                <span>Direct typing workflow</span>
               </div>
-            )}
+              <div className="metric-card">
+                <strong>Saved scenes</strong>
+                <span>Local creative library</span>
+              </div>
+            </div>
+          </div>
 
-            <div className={`vb-frame frame-${frameStyle}`}>
-              <div className="vb-board-body">
-                <div className="vb-board" role="img" aria-label="Digital split flap display">
-                  {grid.map((row, rowIndex) => (
-                    <div className="vb-row" key={rowIndex}>
-                      {row.map((cell, columnIndex) => (
-                        <SplitFlap
-                          key={`${rowIndex}-${columnIndex}`}
-                          targetChar={cell.char}
-                          color={cell.color}
-                          delay={columnIndex * STAGGER_COL + rowIndex * STAGGER_ROW}
-                          hoverActive={hoverMode}
-                        />
-                      ))}
-                    </div>
-                  ))}
-                </div>
+          <div className="hero-board">{boardMarkup}</div>
+        </section>
+
+        <section className="studio-grid">
+          <article className="panel-card panel-tall">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Control deck</p>
+                <h3>Board access</h3>
               </div>
             </div>
 
-            {!presentMode && (
-              <div className="stage-caption">
-                <span>{COLS} columns</span>
-                <span>{ROWS} rows</span>
-                <span>Shareable display link</span>
-              </div>
-            )}
-          </div>
-        </section>
+            <div className="button-cluster">
+              <button className="secondary-button" onClick={handleCopyLink}>
+                Copy Display Link
+              </button>
+              <button className="secondary-button" onClick={handleFullscreenToggle}>
+                {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+              </button>
+              <button className="secondary-button" onClick={clearBoard}>
+                Clear Board
+              </button>
+              <button className="secondary-button" onClick={togglePresentMode}>
+                Enter Display Mode
+              </button>
+            </div>
 
-        {!presentMode && (
-          <aside className="control-panel">
-            <section className="panel-card panel-intro">
-              <div className="panel-copy">
-                <p className="eyebrow">Studio</p>
-                <h2>Compose once, open anywhere.</h2>
-                <p>
-                  Use <strong>Display Mode</strong> for a clean presentation screen. <strong>Copy Display Link</strong> creates a URL that opens the same board state without the editor chrome.
-                </p>
-              </div>
-              <div className="action-grid">
-                <button className="primary-button" onClick={() => setEditMode(true)}>
-                  Compose
-                </button>
-                <button className="secondary-button" onClick={togglePresentMode}>
-                  Display Mode
-                </button>
-                <button className="secondary-button" onClick={handleCopyLink}>
-                  Copy Display Link
-                </button>
-                <button className="secondary-button" onClick={handleFullscreenToggle}>
-                  {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-                </button>
-              </div>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <h3>Quick presets</h3>
-                <button className="mini-button" onClick={handleClear}>
-                  Clear
-                </button>
-              </div>
-              <div className="preset-grid">
-                {presets.map((preset) => (
-                  <button key={preset.label} className="chip-button" onClick={() => handlePreset(preset)}>
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </section>
-
-            <section className="panel-card">
-              <div className="section-heading">
-                <h3>Stage styling</h3>
-              </div>
+            <div className="option-stack">
               <div className="option-group">
                 <span className="field-label">Wall</span>
                 <div className="chip-grid">
@@ -834,6 +1396,7 @@ export default function DigitalVestaboard() {
                   ))}
                 </div>
               </div>
+
               <div className="option-group">
                 <span className="field-label">Frame</span>
                 <div className="chip-grid compact">
@@ -845,69 +1408,198 @@ export default function DigitalVestaboard() {
                   </button>
                 </div>
               </div>
-              <div className="toggle-row">
-                <button className={`icon-toggle${soundOn ? " active" : ""}`} onClick={() => setSoundOn((current) => !current)}>
-                  <ToggleIcon enabled={soundOn} />
-                  <span>Mechanical sound</span>
-                </button>
-                <button className={`icon-toggle${hoverMode ? " active accent" : ""}`} onClick={() => setHoverMode((current) => !current)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M4 4l7.07 17 2.51-7.39L21 11.07z" />
-                  </svg>
-                  <span>Hover cycle</span>
-                </button>
-              </div>
-              <p className={`panel-note${isDarkWall ? " note-light" : ""}`}>
-                Darker wall presets keep the board high-contrast for living-room and TV viewing.
-              </p>
-            </section>
+            </div>
 
-            <section className="panel-card">
-              <div className="section-heading">
-                <h3>Message editor</h3>
-                <span className="character-meta">
-                  {ROWS} lines · {COLS} chars
-                </span>
+            <div className="toggle-row">
+              <button className={`icon-toggle${soundOn ? " active" : ""}`} onClick={() => setSoundOn((current) => !current)}>
+                <ToggleIcon enabled={soundOn} />
+                <span>Mechanical sound</span>
+              </button>
+              <button className={`icon-toggle${hoverMode ? " active accent" : ""}`} onClick={() => setHoverMode((current) => !current)}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 4l7.07 17 2.51-7.39L21 11.07z" />
+                </svg>
+                <span>Cursor hover effect</span>
+              </button>
+            </div>
+
+            <p className={`panel-note${isDarkWall ? " note-light" : ""}`}>
+              Click any tile to open the picker. Once a tile is active, typing on your keyboard advances across the board automatically, including spaces.
+            </p>
+
+            <div className="save-card">
+              <div className="section-heading tight">
+                <div>
+                  <p className="eyebrow">Save scene</p>
+                  <h3>Store this board</h3>
+                </div>
               </div>
-              <textarea
-                ref={textareaRef}
-                className="message-input"
-                rows={6}
-                placeholder={`Type up to ${ROWS} lines.\nUse color tiles with ${COLOR_KEYS.join(" ")}`}
-                value={inputText}
-                onChange={(event) => setInputText(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                    handleSend();
-                  }
-                }}
-              />
-              <div className="color-row">
-                {colorEntries.map(([key, value]) => (
-                  <button
-                    key={key}
-                    className="color-chip"
-                    style={{ background: value }}
-                    onClick={() => setInputText((current) => `${current}${key}`)}
-                    title={`Insert ${key}`}
-                  >
-                    {key[1]}
+              <div className="save-row">
+                <input
+                  className="save-input"
+                  value={saveName}
+                  onChange={(event) => setSaveName(event.target.value)}
+                  placeholder="Night menu, launch screen, front door..."
+                />
+                <button className="primary-button" onClick={saveScreen}>
+                  Save Screen
+                </button>
+              </div>
+            </div>
+          </article>
+
+          <article className="panel-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Tile focus</p>
+                <h3>{selectedLabel}</h3>
+              </div>
+            </div>
+
+            {selectedCell ? (
+              <>
+                <p className="panel-note">
+                  Current tile: <strong>{describeCell(selectedCell)}</strong>. Use the modal palette or just type on your keyboard. Arrow keys move between flaps, and paste works after you pick a starting tile.
+                </p>
+                <div className="composer-shortcuts">
+                  <button className="secondary-button" onClick={() => setComposerOpen(true)}>
+                    Open Tile Picker
                   </button>
-                ))}
-                <span className="character-meta">Tap a color tile to insert it into the message.</span>
+                  <button className="secondary-button" onClick={() => insertCharacterAtCursor(" ")}>
+                    Insert Blank
+                  </button>
+                </div>
+              </>
+            ) : (
+              <div className="empty-state">
+                <strong>Pick a flap to begin.</strong>
+                <span>Click any tile on the board, then type or choose a character from the tile composer.</span>
               </div>
-              <div className="editor-actions">
-                <button className="secondary-button" onClick={() => setEditMode((current) => !current)}>
-                  {editMode ? "Hide Editor Focus" : "Focus Editor"}
-                </button>
-                <button className="primary-button" onClick={handleSend}>
-                  Display Message
-                </button>
+            )}
+
+            <div className="mini-feature-list">
+              <div>
+                <strong>Sequential typing</strong>
+                <span>Starts from the tile you clicked.</span>
               </div>
-            </section>
-          </aside>
-        )}
+              <div>
+                <strong>Symbol support</strong>
+                <span>Numbers, punctuation, and blank flaps included.</span>
+              </div>
+              <div>
+                <strong>Signal tiles</strong>
+                <span>Drop colored flaps into the composition when needed.</span>
+              </div>
+            </div>
+          </article>
+
+          <article className="panel-card">
+            <div className="section-heading">
+              <div>
+                <p className="eyebrow">Featured scenes</p>
+                <h3>Built to sell access</h3>
+              </div>
+            </div>
+
+            <div className="scene-list">
+              {featuredScenes.map((scene) => (
+                <div className="scene-card" key={scene.id}>
+                  <div>
+                    <strong>{scene.name}</strong>
+                    <p>{scene.blurb}</p>
+                  </div>
+                  <button className="secondary-button" onClick={() => loadScene(scene)}>
+                    Load Scene
+                  </button>
+                </div>
+              ))}
+            </div>
+          </article>
+        </section>
+
+        <section className="selling-grid">
+          <article className="marketing-card">
+            <p className="eyebrow">1. Board-first editing</p>
+            <h3>Make the board the product demo, not a screenshot.</h3>
+            <p>
+              Landing visitors can interact with the real board immediately, hear the flaps, and understand the physicality before you ever ask them to buy.
+            </p>
+          </article>
+
+          <article className="marketing-card">
+            <p className="eyebrow">2. Screen-ready output</p>
+            <h3>Design in the browser, then push the same scene to a TV or phone.</h3>
+            <p>
+              Display mode strips away the marketing chrome and turns the same composition into a clean full-screen board for signage, home displays, and events.
+            </p>
+          </article>
+
+          <article className="marketing-card">
+            <p className="eyebrow">3. Saveable moments</p>
+            <h3>Build a reusable library of lobby screens, menus, launches, and rituals.</h3>
+            <p>
+              Saved screens give the experience a product feel instead of a one-off toy, which is exactly the right tone for a premium digital Vestaboard alternative.
+            </p>
+          </article>
+        </section>
+
+        <section className="saved-shell" ref={savedSectionRef}>
+          <div className="saved-header">
+            <div>
+              <p className="eyebrow">Saved screens</p>
+              <h2>Your board library</h2>
+            </div>
+            <button className="ghost-button" onClick={scrollToBoard}>
+              Back to Board
+            </button>
+          </div>
+
+          {savedScreens.length === 0 ? (
+            <div className="empty-saved">
+              <strong>No saved screens yet.</strong>
+              <span>Build a board above, name it, and hit Save Screen to start collecting scenes.</span>
+            </div>
+          ) : (
+            <div className="saved-grid">
+              {savedScreens.map((screen) => {
+                const previewLines = getPreviewLines(screen.grid);
+                return (
+                  <article className="saved-card" key={screen.id}>
+                    <div className="saved-card-head">
+                      <div>
+                        <strong>{screen.name}</strong>
+                        <span>{formatTimestamp(screen.createdAt)}</span>
+                      </div>
+                      <div className="saved-card-actions">
+                        <button className="mini-button" onClick={() => loadSavedScreen(screen)}>
+                          Load
+                        </button>
+                        <button className="mini-button destructive" onClick={() => deleteSavedScreen(screen.id)}>
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div className="saved-preview">
+                      {previewLines.length > 0 ? previewLines.map((line) => <span key={line}>{line}</span>) : <span>Blank board</span>}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </section>
       </main>
+
+      {composerOpen && activeCell && selectedCell && (
+        <ComposerModal
+          position={activeCell}
+          cell={selectedCell}
+          onClose={closeComposer}
+          onPickCharacter={insertCharacterAtCursor}
+          onPickBlank={() => insertCharacterAtCursor(" ")}
+          onPickColor={insertColorAtCursor}
+        />
+      )}
 
       {toast && <div className="toast">{toast}</div>}
     </div>
