@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@500;700&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=JetBrains+Mono:wght@500;700&display=swap");
 
 :root {
   color-scheme: dark;
@@ -206,6 +206,38 @@ button {
   z-index: 3;
 }
 
+.present-exit-dock {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(11, 11, 11, 0.78);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  z-index: 3;
+}
+
+.present-exit-dock span {
+  color: rgba(255, 247, 238, 0.7);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.present-exit-button {
+  padding: 10px 16px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--accent-strong), var(--accent));
+  color: #fffaf3;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 .vb-frame {
   border-radius: 16px;
   transition: box-shadow 0.3s ease;
@@ -228,18 +260,21 @@ button {
 .vb-board-body {
   background: linear-gradient(180deg, #1d1d1d 0%, #181818 100%);
   border-radius: 10px;
-  padding: clamp(10px, 2vw, 18px);
+  padding: clamp(9px, 1.8vw, 16px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    inset 0 -8px 18px rgba(0, 0, 0, 0.22);
 }
 
 .vb-board {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 2px;
 }
 
 .vb-row {
   display: flex;
-  gap: 2px;
+  gap: 1px;
 }
 
 .flap-unit {
@@ -267,13 +302,16 @@ button {
   position: absolute;
   width: 100%;
   text-align: center;
-  font-family: "JetBrains Mono", monospace;
+  font-family: "Barlow Condensed", "Arial Narrow", sans-serif;
   font-weight: 700;
-  font-size: calc(var(--flap-width) * 0.68);
+  font-size: calc(var(--flap-width) * 0.79);
   line-height: calc(var(--flap-width) * 1.3);
+  letter-spacing: -0.018em;
   color: #f0ece4;
   user-select: none;
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  transform: translateY(-0.02em);
+  font-variant-numeric: tabular-nums lining-nums;
 }
 
 .tc {
@@ -286,37 +324,37 @@ button {
 
 .bottom-new {
   top: 50%;
-  background: linear-gradient(180deg, #232323 0%, #272727 100%);
-  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #242423 0%, #292928 100%);
+  border-radius: 0 0 3px 3px;
   z-index: 1;
 }
 
 .top-static {
   top: 0;
-  background: linear-gradient(180deg, #2d2d2d 0%, #262626 100%);
-  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #2d2d2c 0%, #272726 100%);
+  border-radius: 3px 3px 0 0;
   z-index: 2;
 }
 
 .bottom-old {
   top: 50%;
-  background: linear-gradient(180deg, #232323 0%, #272727 100%);
-  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #242423 0%, #292928 100%);
+  border-radius: 0 0 3px 3px;
   z-index: 3;
 }
 
 .top-flip {
   top: 0;
-  background: linear-gradient(180deg, #2d2d2d 0%, #262626 100%);
-  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, #2d2d2c 0%, #272726 100%);
+  border-radius: 3px 3px 0 0;
   transform-origin: bottom center;
   z-index: 5;
 }
 
 .bottom-flip {
   top: 50%;
-  background: linear-gradient(180deg, #232323 0%, #272727 100%);
-  border-radius: 0 0 4px 4px;
+  background: linear-gradient(180deg, #242423 0%, #292928 100%);
+  border-radius: 0 0 3px 3px;
   transform-origin: top center;
   transform: rotateX(90deg);
   z-index: 4;
@@ -668,6 +706,15 @@ button {
 
   .present-toolbar {
     left: calc(14px + env(safe-area-inset-left));
+  }
+
+  .present-exit-dock {
+    width: calc(100% - 28px - env(safe-area-inset-left) - env(safe-area-inset-right));
+    justify-content: space-between;
+  }
+
+  .present-exit-dock span {
+    display: none;
   }
 
   .action-grid,

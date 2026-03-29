@@ -80,7 +80,7 @@ const audioEngine = (() => {
 
       ctx = new AudioContextClass();
       masterGain = ctx.createGain();
-      masterGain.gain.value = 0.12;
+      masterGain.gain.value = 0.09;
       masterGain.connect(ctx.destination);
     }
 
@@ -108,36 +108,74 @@ const audioEngine = (() => {
 
         const { ctx: audioContext, masterGain: gain } = contextData;
         const startAt = audioContext.currentTime;
-        const sampleLength = Math.floor(audioContext.sampleRate * 0.006);
-        const buffer = audioContext.createBuffer(1, sampleLength, audioContext.sampleRate);
-        const channel = buffer.getChannelData(0);
+        const burstLength = Math.floor(audioContext.sampleRate * 0.022);
+        const burst = audioContext.createBuffer(1, burstLength, audioContext.sampleRate);
+        const burstData = burst.getChannelData(0);
 
-        for (let index = 0; index < sampleLength; index += 1) {
-          const envelope = index < 3 ? index / 3 : Math.exp(-((index - 3) / (sampleLength * 0.08)));
-          channel[index] = (Math.random() * 2 - 1) * envelope;
+        for (let index = 0; index < burstLength; index += 1) {
+          const progress = index / burstLength;
+          const decay = Math.exp(-progress * 13);
+          const grit = (Math.random() * 2 - 1) * decay;
+          const chatter = Math.sin(index * 0.34) * 0.14 * decay;
+          burstData[index] = grit + chatter;
         }
 
-        const source = audioContext.createBufferSource();
-        source.buffer = buffer;
+        const playNoiseHit = ({ time, volume, band, low }) => {
+          const source = audioContext.createBufferSource();
+          source.buffer = burst;
 
-        const highPass = audioContext.createBiquadFilter();
-        highPass.type = "highpass";
-        highPass.frequency.value = 2200 + Math.random() * 800;
-        highPass.Q.value = 0.7;
+          const highPass = audioContext.createBiquadFilter();
+          highPass.type = "highpass";
+          highPass.frequency.value = 720;
+          highPass.Q.value = 0.75;
 
-        const peak = audioContext.createBiquadFilter();
-        peak.type = "peaking";
-        peak.frequency.value = 3500 + Math.random() * 1500;
-        peak.gain.value = 6;
-        peak.Q.value = 2;
+          const bandPass = audioContext.createBiquadFilter();
+          bandPass.type = "bandpass";
+          bandPass.frequency.value = band;
+          bandPass.Q.value = 1.35;
 
-        const clickGain = audioContext.createGain();
-        clickGain.gain.setValueAtTime(0.5 + Math.random() * 0.3, startAt);
-        clickGain.gain.exponentialRampToValueAtTime(0.001, startAt + 0.008);
+          const lowPass = audioContext.createBiquadFilter();
+          lowPass.type = "lowpass";
+          lowPass.frequency.value = low;
+          lowPass.Q.value = 0.6;
 
-        source.connect(highPass).connect(peak).connect(clickGain).connect(gain);
-        source.start(startAt);
-        source.stop(startAt + 0.01);
+          const hitGain = audioContext.createGain();
+          hitGain.gain.setValueAtTime(0.0001, time);
+          hitGain.gain.linearRampToValueAtTime(volume, time + 0.0012);
+          hitGain.gain.exponentialRampToValueAtTime(0.0001, time + 0.024);
+
+          source.connect(highPass).connect(bandPass).connect(lowPass).connect(hitGain).connect(gain);
+          source.start(time);
+          source.stop(time + 0.026);
+        };
+
+        playNoiseHit({
+          time: startAt,
+          volume: 0.18 + Math.random() * 0.03,
+          band: 1900 + Math.random() * 240,
+          low: 4300,
+        });
+
+        playNoiseHit({
+          time: startAt + 0.007 + Math.random() * 0.0015,
+          volume: 0.09 + Math.random() * 0.02,
+          band: 1320 + Math.random() * 180,
+          low: 3100,
+        });
+
+        const bodyOscillator = audioContext.createOscillator();
+        bodyOscillator.type = "triangle";
+        bodyOscillator.frequency.setValueAtTime(210 + Math.random() * 22, startAt);
+        bodyOscillator.frequency.exponentialRampToValueAtTime(160, startAt + 0.045);
+
+        const bodyGain = audioContext.createGain();
+        bodyGain.gain.setValueAtTime(0.0001, startAt);
+        bodyGain.gain.linearRampToValueAtTime(0.016, startAt + 0.0016);
+        bodyGain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.048);
+
+        bodyOscillator.connect(bodyGain).connect(gain);
+        bodyOscillator.start(startAt);
+        bodyOscillator.stop(startAt + 0.05);
       } catch {
         // Ignore audio failures in browsers with stricter autoplay policies.
       }
@@ -578,6 +616,21 @@ export default function DigitalVestaboard() {
   }, []);
 
   useEffect(() => {
+    if (!presentMode) {
+      return undefined;
+    }
+
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") {
+        setPresentMode(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [presentMode]);
+
+  useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
@@ -671,7 +724,7 @@ export default function DigitalVestaboard() {
             {presentMode && (
               <div className="present-toolbar">
                 <button className="ghost-button" onClick={togglePresentMode}>
-                  Exit Display
+                  Back to Studio
                 </button>
                 <button className="ghost-button" onClick={handleFullscreenToggle}>
                   {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
@@ -679,6 +732,15 @@ export default function DigitalVestaboard() {
                 <button className="ghost-button" onClick={handleCopyLink}>
                   Copy Link
                 </button>
+              </div>
+            )}
+
+            {presentMode && (
+              <div className="present-exit-dock">
+                <button className="present-exit-button" onClick={togglePresentMode}>
+                  Back to Studio
+                </button>
+                <span>Press Esc on desktop to leave display mode.</span>
               </div>
             )}
 
