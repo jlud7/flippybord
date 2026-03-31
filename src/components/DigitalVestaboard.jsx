@@ -547,7 +547,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
       return undefined;
     }
 
-    const jitter = Math.random() * 40;
+    const jitter = Math.random() * 12;
     const timer = window.setTimeout(() => {
       if (color) {
         if (curColorRef.current === color && curCharRef.current === " ") {
@@ -715,92 +715,85 @@ function ToggleIcon({ enabled }) {
   );
 }
 
-function ComposerModal({ position, cell, onClose, onPickCharacter, onPickBlank, onPickColor }) {
-  const positionLabel = `Row ${position.row + 1}, Tile ${position.col + 1}`;
-
+function MiniBoard({ grid }) {
   return (
-    <div className="modal-backdrop" onClick={onClose}>
-      <div className="composer-modal" onClick={(event) => event.stopPropagation()}>
-        <div className="composer-header">
-          <div>
-            <p className="eyebrow">Tile Composer</p>
-            <h3>{positionLabel}</h3>
-          </div>
-          <button className="mini-icon-button" onClick={onClose} aria-label="Close tile composer">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <line x1="18" y1="6" x2="6" y2="18" />
-              <line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
-
-        <div className="composer-preview">
-          <div className="composer-tile">
-            <div className="composer-mini composer-mini-top" style={cell.color ? { background: cell.color } : {}}>
-              {!cell.color && <span>{cell.char === " " ? "\u00A0" : cell.char}</span>}
+    <div className="mini-board">
+      {grid.map((row, ri) => (
+        <div className="mini-board-row" key={ri}>
+          {row.map((cell, ci) => (
+            <div
+              key={ci}
+              className="mini-board-cell"
+              style={cell.color ? { background: cell.color } : undefined}
+            >
+              {!cell.color && cell.char !== " " ? cell.char : ""}
             </div>
-            <div className="composer-mini composer-mini-bottom" style={cell.color ? { background: cell.color } : {}}>
-              {!cell.color && <span>{cell.char === " " ? "\u00A0" : cell.char}</span>}
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function ComposerPanel({ cell, onClose, onPickCharacter, onPickBlank, onPickColor }) {
+  return (
+    <div className="composer-panel">
+      <div className="composer-panel-inner">
+        <div className="composer-panel-row">
+          <div className="composer-section">
+            <div className="composer-section-title"><span>Letters</span></div>
+            <div className="palette-grid letters">
+              {LETTERS.map((character) => (
+                <button
+                  key={character}
+                  className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
+                  onClick={() => onPickCharacter(character)}
+                >
+                  {character}
+                </button>
+              ))}
             </div>
           </div>
-          <div className="composer-copy">
-            <strong>{describeCell(cell)}</strong>
-            <span>Keyboard typing is live. Each choice advances the cursor to the next flap.</span>
+
+          <div className="composer-section">
+            <div className="composer-section-title"><span>Numbers & symbols</span></div>
+            <div className="palette-grid compact">
+              {[" ", ...NUMBERS, ...SYMBOLS].map((character) => (
+                <button
+                  key={character === " " ? "blank" : character}
+                  className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
+                  onClick={() => (character === " " ? onPickBlank() : onPickCharacter(character))}
+                >
+                  {character === " " ? "Blank" : character}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="composer-section">
+            <div className="composer-section-title"><span>Colors</span></div>
+            <div className="color-palette">
+              {Object.entries(COLOR_MAP).map(([key, value]) => (
+                <button
+                  key={key}
+                  className={`color-picker${cell.color === value ? " active" : ""}`}
+                  style={{ background: value }}
+                  onClick={() => onPickColor(value)}
+                  title={key}
+                >
+                  {key[1]}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
-        <div className="composer-section">
-          <div className="composer-section-title">
-            <span>Letters</span>
-          </div>
-          <div className="palette-grid letters">
-            {LETTERS.map((character) => (
-              <button
-                key={character}
-                className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
-                onClick={() => onPickCharacter(character)}
-              >
-                {character}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="composer-section">
-          <div className="composer-section-title">
-            <span>Numbers & symbols</span>
-          </div>
-          <div className="palette-grid compact">
-            {[" ", ...NUMBERS, ...SYMBOLS].map((character) => (
-              <button
-                key={character === " " ? "blank" : character}
-                className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
-                onClick={() => (character === " " ? onPickBlank() : onPickCharacter(character))}
-              >
-                {character === " " ? "Blank" : character}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="composer-section">
-          <div className="composer-section-title">
-            <span>Signal tiles</span>
-          </div>
-          <div className="color-palette">
-            {Object.entries(COLOR_MAP).map(([key, value]) => (
-              <button
-                key={key}
-                className={`color-picker${cell.color === value ? " active" : ""}`}
-                style={{ background: value }}
-                onClick={() => onPickColor(value)}
-                title={key}
-              >
-                {key[1]}
-              </button>
-            ))}
-          </div>
-        </div>
+        <button className="composer-close" onClick={onClose} aria-label="Close composer">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
       </div>
     </div>
   );
@@ -1182,8 +1175,7 @@ export default function DigitalVestaboard() {
           </div>
         </div>
         {composerOpen && activeCell && selectedCell && (
-          <ComposerModal
-            position={activeCell}
+          <ComposerPanel
             cell={selectedCell}
             onClose={closeComposer}
             onPickCharacter={insertCharacterAtCursor}
@@ -1228,16 +1220,19 @@ export default function DigitalVestaboard() {
             <div className="board-stage-overlay" />
             <div className="board-stage-content">
               {boardContent}
-              {activeCell && (
-                <div className="board-status">
-                  <span className="status-cell">R{activeCell.row + 1} · C{activeCell.col + 1}{selectedCell && selectedCell.char !== " " ? ` · ${describeCell(selectedCell)}` : ""}</span>
-                  <span className="status-divider" />
-                  <span className="status-hint">Type to enter · Arrows to move · Esc to deselect</span>
-                </div>
-              )}
             </div>
           </div>
         </section>
+
+        {composerOpen && activeCell && selectedCell && (
+          <ComposerPanel
+            cell={selectedCell}
+            onClose={closeComposer}
+            onPickCharacter={insertCharacterAtCursor}
+            onPickBlank={() => insertCharacterAtCursor(" ")}
+            onPickColor={insertColorAtCursor}
+          />
+        )}
 
         <section className="toolbar animate-in delay-1">
           <div className="toolbar-inner">
@@ -1352,26 +1347,21 @@ export default function DigitalVestaboard() {
             </div>
           ) : (
             <div className="saved-grid">
-              {savedScreens.map((screen) => {
-                const previewLines = getPreviewLines(screen.grid);
-                return (
-                  <article className="saved-card" key={screen.id}>
-                    <div className="saved-card-head">
-                      <div>
-                        <strong>{screen.name}</strong>
-                        <span>{formatTimestamp(screen.createdAt)}</span>
-                      </div>
-                      <div className="saved-card-actions">
-                        <button className="mini-btn" onClick={() => loadSavedScreen(screen)}>Load</button>
-                        <button className="mini-btn destructive" onClick={() => deleteSavedScreen(screen.id)}>Delete</button>
-                      </div>
+              {savedScreens.map((screen) => (
+                <article className="saved-card" key={screen.id}>
+                  <div className="saved-card-head">
+                    <div>
+                      <strong>{screen.name}</strong>
+                      <span>{formatTimestamp(screen.createdAt)}</span>
                     </div>
-                    <div className="saved-preview">
-                      {previewLines.length > 0 ? previewLines.map((line) => <span key={line}>{line}</span>) : <span>Blank board</span>}
+                    <div className="saved-card-actions">
+                      <button className="mini-btn" onClick={() => loadSavedScreen(screen)}>Load</button>
+                      <button className="mini-btn destructive" onClick={() => deleteSavedScreen(screen.id)}>Delete</button>
                     </div>
-                  </article>
-                );
-              })}
+                  </div>
+                  <MiniBoard grid={screen.grid} />
+                </article>
+              ))}
             </div>
           )}
         </section>
@@ -1384,17 +1374,6 @@ export default function DigitalVestaboard() {
           <span className="footer-text">Digital split-flap display</span>
         </div>
       </footer>
-
-      {composerOpen && activeCell && selectedCell && (
-        <ComposerModal
-          position={activeCell}
-          cell={selectedCell}
-          onClose={closeComposer}
-          onPickCharacter={insertCharacterAtCursor}
-          onPickBlank={() => insertCharacterAtCursor(" ")}
-          onPickColor={insertColorAtCursor}
-        />
-      )}
 
       {toast && <div className="toast">{toast}</div>}
     </div>
