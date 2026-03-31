@@ -19,8 +19,8 @@ const COLOR_MAP = {
 const STORAGE_KEY = "flippybord-state-v3";
 const SAVED_SCREENS_KEY = "flippybord-saved-screens-v1";
 const DEFAULT_MESSAGE = "YOUR STORY HERE\nCLICK A TILE\nAND START TYPING";
-const STAGGER_COL = 22;
-const STAGGER_ROW = 36;
+const STAGGER_COL = 14;
+const STAGGER_ROW = 22;
 
 const BACKGROUNDS = [
   {
@@ -489,7 +489,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
   const targetRef = useRef(targetChar);
   const colorRef = useRef(color);
   const disturbedRef = useRef(false);
-  const baseDuration = useRef(60 + Math.random() * 25);
+  const baseDuration = useRef(50 + Math.random() * 20);
   const flipTimerRef = useRef(null);
   const gapTimerRef = useRef(null);
   const processQueueRef = useRef(() => {});
@@ -522,7 +522,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
       const item = queueRef.current.shift();
       const nextCharacter = typeof item === "object" ? item.char : item;
       const nextCharacterColor = typeof item === "object" ? item.color : null;
-      const duration = Math.round(baseDuration.current + (Math.random() - 0.5) * 30);
+      const duration = Math.round(baseDuration.current + (Math.random() - 0.5) * 16);
 
       setFlipMs(duration);
       setNextChar(nextCharacter);
@@ -537,7 +537,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
         curCharRef.current = nextCharacter;
         curColorRef.current = nextCharacterColor;
 
-        gapTimerRef.current = window.setTimeout(processQueueRef.current, 3 + Math.random() * 8);
+        gapTimerRef.current = window.setTimeout(processQueueRef.current, 2 + Math.random() * 5);
       }, duration);
     };
   }, []);
