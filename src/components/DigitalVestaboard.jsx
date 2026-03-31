@@ -508,7 +508,7 @@ function describeCell(cell) {
   return cell.char === " " ? "Blank" : cell.char;
 }
 
-function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, label }) {
+function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, onDoubleClick, label }) {
   const [currentChar, setCurrentChar] = useState(" ");
   const [currentColor, setCurrentColor] = useState(null);
   const [flipping, setFlipping] = useState(false);
@@ -702,6 +702,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
       className={`flap-unit${selected ? " is-selected" : ""}`}
       onMouseEnter={handleHover}
       onClick={onSelect}
+      onDoubleClick={onDoubleClick}
       onKeyDown={(event) => {
         if (event.key === "Enter" || event.key === " ") {
           event.preventDefault();
@@ -949,42 +950,36 @@ export default function DigitalVestaboard() {
       if (event.key === "ArrowRight") {
         event.preventDefault();
         setActiveCell(movePosition(activeCell, 0, 1));
-        setComposerOpen(true);
         return;
       }
 
       if (event.key === "ArrowLeft") {
         event.preventDefault();
         setActiveCell(movePosition(activeCell, 0, -1));
-        setComposerOpen(true);
         return;
       }
 
       if (event.key === "ArrowUp") {
         event.preventDefault();
         setActiveCell(movePosition(activeCell, -1, 0));
-        setComposerOpen(true);
         return;
       }
 
       if (event.key === "ArrowDown") {
         event.preventDefault();
         setActiveCell(movePosition(activeCell, 1, 0));
-        setComposerOpen(true);
         return;
       }
 
       if (event.key === "Tab") {
         event.preventDefault();
         setActiveCell(event.shiftKey ? retreatPosition(activeCell) : advancePosition(activeCell));
-        setComposerOpen(true);
         return;
       }
 
       if (event.key === "Enter") {
         event.preventDefault();
         setActiveCell(nextLinePosition(activeCell));
-        setComposerOpen(true);
         return;
       }
 
@@ -1005,7 +1000,6 @@ export default function DigitalVestaboard() {
         const previousCell = retreatPosition(activeCell);
         setGrid((currentGrid) => setGridCell(currentGrid, previousCell, createCell()));
         setActiveCell(previousCell);
-        setComposerOpen(true);
         return;
       }
 
@@ -1017,7 +1011,6 @@ export default function DigitalVestaboard() {
       event.preventDefault();
       setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(character, null)));
       setActiveCell(advancePosition(activeCell));
-      setComposerOpen(true);
     };
 
     const handlePaste = (event) => {
@@ -1062,7 +1055,6 @@ export default function DigitalVestaboard() {
         return nextGrid;
       });
       setActiveCell(cursor);
-      setComposerOpen(true);
     };
 
     window.addEventListener("keydown", handleKeyDown);
@@ -1074,6 +1066,10 @@ export default function DigitalVestaboard() {
   }, [activeCell, composerOpen, presentMode, selectedCell]);
 
   const selectTile = (row, col) => {
+    setActiveCell({ row, col });
+  };
+
+  const openComposerForTile = (row, col) => {
     setActiveCell({ row, col });
     setComposerOpen(true);
   };
@@ -1160,7 +1156,6 @@ export default function DigitalVestaboard() {
   const startEditing = () => {
     scrollToBoard();
     setActiveCell({ row: 1, col: 0 });
-    setComposerOpen(true);
   };
 
   const handleCopyLink = async () => {
@@ -1248,6 +1243,7 @@ export default function DigitalVestaboard() {
                       hoverActive={hoverMode}
                       selected={activeCell?.row === rowIndex && activeCell?.col === columnIndex}
                       onSelect={() => selectTile(rowIndex, columnIndex)}
+                      onDoubleClick={() => openComposerForTile(rowIndex, columnIndex)}
                       label={`Row ${rowIndex + 1} column ${columnIndex + 1} ${describeCell(cell)}`}
                     />
                   ))}
@@ -1260,8 +1256,14 @@ export default function DigitalVestaboard() {
         {!presentMode && (
           <div className="board-instruction-bar">
             <span>{selectedLabel}</span>
-            <span>Click a tile or press paste after selecting a start point.</span>
-            <span>{hoverMode ? "Cursor ripple active" : "Cursor ripple paused"}</span>
+            {activeCell ? (
+              <>
+                <span>Type to enter characters. Arrow keys to navigate.</span>
+                <span className="instruction-action" onClick={() => setComposerOpen(true)} role="button" tabIndex={0}>Open Tile Picker</span>
+              </>
+            ) : (
+              <span>Click any tile to start typing</span>
+            )}
           </div>
         )}
       </div>
@@ -1301,12 +1303,12 @@ export default function DigitalVestaboard() {
       <div className="ambient-glow ambient-glow-left" />
       <div className="ambient-glow ambient-glow-right" />
 
-      <header className="site-nav">
+      <header className="site-nav animate-in">
         <div className="brand-lockup">
           <span className="brand-mark">FB</span>
           <div>
             <strong>Flippy Bord</strong>
-            <span>Digital split-flap access</span>
+            <span>Digital split-flap display</span>
           </div>
         </div>
 
@@ -1315,26 +1317,27 @@ export default function DigitalVestaboard() {
             Saved Screens
           </button>
           <button className="primary-button" onClick={startEditing}>
-            Launch Demo Board
+            Start Creating
           </button>
         </div>
       </header>
 
       <main className="landing-shell">
-        <section className="hero-grid">
+        <section className="hero-grid animate-in">
           <div className="hero-copy">
             <p className="eyebrow">Vestaboard-inspired browser signage</p>
-            <h1>Sell the ritual of a real split-flap board, without buying the hardware first.</h1>
+            <h1>The split-flap board <span className="gradient-text">you can touch.</span></h1>
             <p className="hero-text">
-              Flippy Bord turns any TV, browser, or phone into a premium split-flap experience. Demo the board live, click into any tile, and compose letter by letter with the same satisfying flip-through behavior people love on a physical board.
+              Click any tile and start typing. Every letter flips into place with mechanical precision. No hardware required — just a browser and something worth saying.
             </p>
 
             <div className="hero-actions">
               <button className="primary-button" onClick={startEditing}>
-                Start Editing Live
+                <span>Start Creating</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
               </button>
               <button className="secondary-button" onClick={togglePresentMode}>
-                Display Fullscreen
+                Display Mode
               </button>
             </div>
 
@@ -1344,12 +1347,12 @@ export default function DigitalVestaboard() {
                 <span>Clickable flaps</span>
               </div>
               <div className="metric-card">
-                <strong>Tile-first</strong>
-                <span>Direct typing workflow</span>
+                <strong>Inline</strong>
+                <span>Click & type editing</span>
               </div>
               <div className="metric-card">
-                <strong>Saved scenes</strong>
-                <span>Local creative library</span>
+                <strong>Scenes</strong>
+                <span>Save & share boards</span>
               </div>
             </div>
           </div>
@@ -1357,7 +1360,7 @@ export default function DigitalVestaboard() {
           <div className="hero-board">{boardMarkup}</div>
         </section>
 
-        <section className="studio-grid">
+        <section className="studio-grid animate-in delay-1">
           <article className="panel-card panel-tall">
             <div className="section-heading">
               <div>
@@ -1424,7 +1427,7 @@ export default function DigitalVestaboard() {
             </div>
 
             <p className={`panel-note${isDarkWall ? " note-light" : ""}`}>
-              Click any tile to open the picker. Once a tile is active, typing on your keyboard advances across the board automatically, including spaces.
+              Click any tile and start typing. Characters advance automatically. Double-click a tile for the full picker with colors and symbols.
             </p>
 
             <div className="save-card">
@@ -1459,7 +1462,7 @@ export default function DigitalVestaboard() {
             {selectedCell ? (
               <>
                 <p className="panel-note">
-                  Current tile: <strong>{describeCell(selectedCell)}</strong>. Use the modal palette or just type on your keyboard. Arrow keys move between flaps, and paste works after you pick a starting tile.
+                  Current tile: <strong>{describeCell(selectedCell)}</strong>. Just type on your keyboard to enter characters. Arrow keys move between tiles, paste works too.
                 </p>
                 <div className="composer-shortcuts">
                   <button className="secondary-button" onClick={() => setComposerOpen(true)}>
@@ -1472,8 +1475,8 @@ export default function DigitalVestaboard() {
               </>
             ) : (
               <div className="empty-state">
-                <strong>Pick a flap to begin.</strong>
-                <span>Click any tile on the board, then type or choose a character from the tile composer.</span>
+                <strong>Click any tile to begin.</strong>
+                <span>Select a tile on the board and start typing. Double-click for the full tile picker with colors and symbols.</span>
               </div>
             )}
 
@@ -1517,33 +1520,42 @@ export default function DigitalVestaboard() {
           </article>
         </section>
 
-        <section className="selling-grid">
+        <section className="selling-grid animate-in delay-2">
           <article className="marketing-card">
-            <p className="eyebrow">1. Board-first editing</p>
-            <h3>Make the board the product demo, not a screenshot.</h3>
+            <div className="marketing-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+            </div>
+            <p className="eyebrow">Click & type</p>
+            <h3>Direct inline editing on every tile.</h3>
             <p>
-              Landing visitors can interact with the real board immediately, hear the flaps, and understand the physicality before you ever ask them to buy.
+              No forms, no modals by default. Click a flap, start typing, and watch each letter flip into place with satisfying mechanical precision.
             </p>
           </article>
 
           <article className="marketing-card">
-            <p className="eyebrow">2. Screen-ready output</p>
-            <h3>Design in the browser, then push the same scene to a TV or phone.</h3>
+            <div className="marketing-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <p className="eyebrow">Display ready</p>
+            <h3>From browser to big screen in one click.</h3>
             <p>
-              Display mode strips away the marketing chrome and turns the same composition into a clean full-screen board for signage, home displays, and events.
+              Switch to display mode and go fullscreen. The same board you designed becomes clean signage for TVs, lobbies, and events.
             </p>
           </article>
 
           <article className="marketing-card">
-            <p className="eyebrow">3. Saveable moments</p>
-            <h3>Build a reusable library of lobby screens, menus, launches, and rituals.</h3>
+            <div className="marketing-icon">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            </div>
+            <p className="eyebrow">Save & share</p>
+            <h3>Build a library of scenes you can reload anytime.</h3>
             <p>
-              Saved screens give the experience a product feel instead of a one-off toy, which is exactly the right tone for a premium digital Vestaboard alternative.
+              Save your favorite boards locally. Build a collection for home rituals, restaurant menus, event signage, and more.
             </p>
           </article>
         </section>
 
-        <section className="saved-shell" ref={savedSectionRef}>
+        <section className="saved-shell animate-in delay-3" ref={savedSectionRef}>
           <div className="saved-header">
             <div>
               <p className="eyebrow">Saved screens</p>
@@ -1589,6 +1601,21 @@ export default function DigitalVestaboard() {
           )}
         </section>
       </main>
+
+      <footer className="site-footer animate-in delay-3">
+        <div className="footer-inner">
+          <div className="footer-brand">
+            <span className="brand-mark">FB</span>
+            <span>Flippy Bord</span>
+          </div>
+          <p className="footer-tagline">A digital split-flap display for browsers, TVs, and phones. Click a tile, type your message, flip.</p>
+          <div className="footer-links">
+            <button className="footer-link" onClick={startEditing}>Start Creating</button>
+            <button className="footer-link" onClick={togglePresentMode}>Display Mode</button>
+            <button className="footer-link" onClick={scrollToSavedScreens}>Saved Screens</button>
+          </div>
+        </div>
+      </footer>
 
       {composerOpen && activeCell && selectedCell && (
         <ComposerModal
