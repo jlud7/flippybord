@@ -19,8 +19,8 @@ const COLOR_MAP = {
 const STORAGE_KEY = "flippybord-state-v3";
 const SAVED_SCREENS_KEY = "flippybord-saved-screens-v1";
 const DEFAULT_MESSAGE = "YOUR STORY HERE\nCLICK A TILE\nAND START TYPING";
-const STAGGER_COL = 32;
-const STAGGER_ROW = 50;
+const STAGGER_COL = 22;
+const STAGGER_ROW = 36;
 
 const BACKGROUNDS = [
   {
@@ -489,7 +489,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
   const targetRef = useRef(targetChar);
   const colorRef = useRef(color);
   const disturbedRef = useRef(false);
-  const baseDuration = useRef(130 + Math.random() * 50);
+  const baseDuration = useRef(85 + Math.random() * 35);
   const flipTimerRef = useRef(null);
   const gapTimerRef = useRef(null);
   const processQueueRef = useRef(() => {});
@@ -537,7 +537,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
         curCharRef.current = nextCharacter;
         curColorRef.current = nextCharacterColor;
 
-        gapTimerRef.current = window.setTimeout(processQueueRef.current, 8 + Math.random() * 20);
+        gapTimerRef.current = window.setTimeout(processQueueRef.current, 5 + Math.random() * 12);
       }, duration);
     };
   }, []);
