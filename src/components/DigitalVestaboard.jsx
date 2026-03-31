@@ -474,7 +474,7 @@ function describeCell(cell) {
   return cell.char === " " ? "Blank" : cell.char;
 }
 
-function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, onDoubleClick, label }) {
+function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, label }) {
   const [currentChar, setCurrentChar] = useState(" ");
   const [currentColor, setCurrentColor] = useState(null);
   const [flipping, setFlipping] = useState(false);
@@ -668,9 +668,8 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
       className={`flap-unit${selected ? " is-selected" : ""}`}
       onMouseEnter={handleHover}
       onClick={onSelect}
-      onDoubleClick={onDoubleClick}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
+        if (event.key === "Enter") {
           event.preventDefault();
           onSelect?.();
         }
@@ -1023,16 +1022,11 @@ export default function DigitalVestaboard() {
 
   const selectTile = (row, col) => {
     setActiveCell({ row, col });
-  };
-
-  const openComposerForTile = (row, col) => {
-    setActiveCell({ row, col });
     setComposerOpen(true);
   };
 
   const closeComposer = () => {
     setComposerOpen(false);
-    setActiveCell(null);
   };
 
   const insertCharacterAtCursor = (character) => {
@@ -1156,7 +1150,6 @@ export default function DigitalVestaboard() {
                   hoverActive={hoverMode}
                   selected={activeCell?.row === rowIndex && activeCell?.col === columnIndex}
                   onSelect={() => selectTile(rowIndex, columnIndex)}
-                  onDoubleClick={() => openComposerForTile(rowIndex, columnIndex)}
                   label={`Row ${rowIndex + 1} column ${columnIndex + 1} ${describeCell(cell)}`}
                 />
               ))}
