@@ -489,7 +489,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
   const targetRef = useRef(targetChar);
   const colorRef = useRef(color);
   const disturbedRef = useRef(false);
-  const baseDuration = useRef(85 + Math.random() * 35);
+  const baseDuration = useRef(60 + Math.random() * 25);
   const flipTimerRef = useRef(null);
   const gapTimerRef = useRef(null);
   const processQueueRef = useRef(() => {});
@@ -537,7 +537,7 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
         curCharRef.current = nextCharacter;
         curColorRef.current = nextCharacterColor;
 
-        gapTimerRef.current = window.setTimeout(processQueueRef.current, 5 + Math.random() * 12);
+        gapTimerRef.current = window.setTimeout(processQueueRef.current, 3 + Math.random() * 8);
       }, duration);
     };
   }, []);
