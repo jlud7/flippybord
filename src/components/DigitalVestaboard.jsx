@@ -31,40 +31,6 @@ const BACKGROUNDS = [
         "radial-gradient(circle at top, rgba(255,255,255,0.25), transparent 28%), linear-gradient(180deg, #f3e3cb 0%, #dcc5a8 100%)",
     },
   },
-  {
-    id: "sunlit-brick",
-    label: "Sunlit Brick",
-    css: {
-      backgroundColor: "#e9ded1",
-      backgroundImage:
-        "repeating-linear-gradient(0deg, transparent, transparent 27px, #cfc1b3 27px, #cfc1b3 29px), repeating-linear-gradient(90deg, transparent, transparent 55px, #cfc1b3 55px, #cfc1b3 57px)",
-      backgroundSize: "114px 29px",
-    },
-  },
-  {
-    id: "night-studio",
-    label: "Night Studio",
-    css: {
-      background:
-        "radial-gradient(circle at top, rgba(255,255,255,0.06), transparent 26%), linear-gradient(170deg, #171717 0%, #090909 100%)",
-    },
-  },
-  {
-    id: "walnut-panel",
-    label: "Walnut Panel",
-    css: {
-      background:
-        "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0) 18%), repeating-linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03) 2px, transparent 2px, transparent 84px), linear-gradient(175deg, #4a3728 0%, #3b2b1e 40%, #2e2218 100%)",
-    },
-  },
-  {
-    id: "stone-loft",
-    label: "Stone Loft",
-    css: {
-      background:
-        "radial-gradient(circle at top, rgba(255,255,255,0.09), transparent 24%), linear-gradient(180deg, #9b958c 0%, #888178 100%)",
-    },
-  },
 ];
 
 const FEATURED_SCENES = [
@@ -81,7 +47,7 @@ const FEATURED_SCENES = [
     name: "Launch Night",
     blurb: "Retail drops, openings, and release countdowns.",
     message: "LAUNCH NIGHT\nDOORS AT 8 PM\nSEE YOU INSIDE",
-    background: "night-studio",
+    background: "gallery-plaster",
     frame: "black",
   },
   {
@@ -89,8 +55,8 @@ const FEATURED_SCENES = [
     name: "Home Ritual",
     blurb: "A calmer board for kitchens, hallways, and studios.",
     message: "DINNER AT 7\nDOG WALK AT 8\nMOVIE NIGHT",
-    background: "walnut-panel",
-    frame: "white",
+    background: "gallery-plaster",
+    frame: "black",
   },
 ];
 
@@ -354,12 +320,12 @@ function parseBoolean(value, fallback = false) {
   return value === "1" || value === "true";
 }
 
-function sanitizeBackground(id) {
-  return BACKGROUNDS.some((entry) => entry.id === id) ? id : BACKGROUNDS[0].id;
+function sanitizeBackground() {
+  return "gallery-plaster";
 }
 
-function sanitizeFrame(value) {
-  return value === "white" ? "white" : "black";
+function sanitizeFrame() {
+  return "black";
 }
 
 function encodeData(payload) {
@@ -845,8 +811,6 @@ export default function DigitalVestaboard() {
   const initialState = useMemo(readInitialState, []);
   const featuredScenes = useMemo(() => FEATURED_SCENES.map(buildFeaturedScene), []);
   const [grid, setGrid] = useState(initialState.grid);
-  const [bgId, setBgId] = useState(initialState.background);
-  const [frameStyle, setFrameStyle] = useState(initialState.frame);
   const [soundOn, setSoundOn] = useState(initialState.sound);
   const [hoverMode, setHoverMode] = useState(initialState.hover);
   const [presentMode, setPresentMode] = useState(initialState.present);
@@ -857,13 +821,11 @@ export default function DigitalVestaboard() {
   const [toast, setToast] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const boardStageRef = useRef(null);
+  const boardRef = useRef(null);
   const savedSectionRef = useRef(null);
 
-  const background = BACKGROUNDS.find((entry) => entry.id === bgId) || BACKGROUNDS[0];
-  const isDarkWall = ["night-studio", "walnut-panel"].includes(bgId);
+  const background = BACKGROUNDS[0];
   const selectedCell = activeCell ? grid[activeCell.row][activeCell.col] : null;
-  const selectedLabel = activeCell ? `R${activeCell.row + 1} · C${activeCell.col + 1}` : "No tile selected";
 
   useEffect(() => {
     audioEngine.setEnabled(soundOn);
@@ -873,7 +835,6 @@ export default function DigitalVestaboard() {
     if (!toast) {
       return undefined;
     }
-
     const timer = window.setTimeout(() => setToast(""), 2400);
     return () => window.clearTimeout(timer);
   }, [toast]);
@@ -882,7 +843,6 @@ export default function DigitalVestaboard() {
     const updateFullscreenState = () => {
       setIsFullscreen(Boolean(document.fullscreenElement));
     };
-
     updateFullscreenState();
     document.addEventListener("fullscreenchange", updateFullscreenState);
     return () => document.removeEventListener("fullscreenchange", updateFullscreenState);
@@ -892,25 +852,22 @@ export default function DigitalVestaboard() {
     if (typeof window === "undefined") {
       return;
     }
-
     const serializedState = {
       grid,
-      background: bgId,
-      frame: frameStyle,
+      background: "gallery-plaster",
+      frame: "black",
       sound: soundOn,
       hover: hoverMode,
       present: presentMode,
     };
-
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(serializedState));
     window.history.replaceState({}, "", buildShareUrl(serializedState));
-  }, [bgId, frameStyle, grid, hoverMode, presentMode, soundOn]);
+  }, [grid, hoverMode, presentMode, soundOn]);
 
   useEffect(() => {
     if (typeof window === "undefined") {
       return;
     }
-
     window.localStorage.setItem(SAVED_SCREENS_KEY, JSON.stringify(savedScreens));
   }, [savedScreens]);
 
@@ -923,7 +880,6 @@ export default function DigitalVestaboard() {
           setActiveCell(null);
           return;
         }
-
         if (presentMode) {
           event.preventDefault();
           setPresentMode(false);
@@ -1083,7 +1039,6 @@ export default function DigitalVestaboard() {
     if (!activeCell) {
       return;
     }
-
     setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(character, null)));
     setActiveCell(advancePosition(activeCell));
     setComposerOpen(true);
@@ -1093,7 +1048,6 @@ export default function DigitalVestaboard() {
     if (!activeCell) {
       return;
     }
-
     setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(" ", color)));
     setActiveCell(advancePosition(activeCell));
     setComposerOpen(true);
@@ -1107,8 +1061,6 @@ export default function DigitalVestaboard() {
 
   const loadScene = (scene) => {
     setGrid(cloneGrid(scene.grid));
-    setBgId(scene.background);
-    setFrameStyle(scene.frame);
     setPresentMode(false);
     setActiveCell(null);
     setComposerOpen(false);
@@ -1120,12 +1072,11 @@ export default function DigitalVestaboard() {
     const nextScreen = {
       id: typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
       name,
-      background: bgId,
-      frame: frameStyle,
+      background: "gallery-plaster",
+      frame: "black",
       createdAt: new Date().toISOString(),
       grid,
     };
-
     setSavedScreens((currentScreens) => [nextScreen, ...currentScreens].slice(0, 8));
     setSaveName("");
     setToast(`${name} saved`);
@@ -1133,8 +1084,6 @@ export default function DigitalVestaboard() {
 
   const loadSavedScreen = (screen) => {
     setGrid(cloneGrid(screen.grid));
-    setBgId(sanitizeBackground(screen.background));
-    setFrameStyle(sanitizeFrame(screen.frame));
     setPresentMode(false);
     setActiveCell(null);
     setComposerOpen(false);
@@ -1146,10 +1095,10 @@ export default function DigitalVestaboard() {
   };
 
   const scrollToBoard = () => {
-    boardStageRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    boardRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
   };
 
-  const scrollToSavedScreens = () => {
+  const scrollToSaved = () => {
     savedSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
@@ -1162,8 +1111,8 @@ export default function DigitalVestaboard() {
     try {
       const url = buildShareUrl({
         grid,
-        background: bgId,
-        frame: frameStyle,
+        background: "gallery-plaster",
+        frame: "black",
         sound: soundOn,
         hover: hoverMode,
         present: true,
@@ -1171,11 +1120,11 @@ export default function DigitalVestaboard() {
       await navigator.clipboard.writeText(url);
       setToast("Display link copied");
     } catch {
-      setToast("Clipboard unavailable in this browser");
+      setToast("Clipboard unavailable");
     }
   };
 
-  const handleFullscreenToggle = async () => {
+  const handleFullscreen = async () => {
     try {
       if (document.fullscreenElement) {
         await document.exitFullscreen();
@@ -1183,106 +1132,62 @@ export default function DigitalVestaboard() {
         await document.documentElement.requestFullscreen();
       }
     } catch {
-      setToast("Fullscreen is not available here");
+      setToast("Fullscreen unavailable");
     }
   };
 
-  const togglePresentMode = () => {
+  const togglePresent = () => {
     setPresentMode((current) => !current);
     setComposerOpen(false);
   };
 
-  const boardMarkup = (
-    <div className={`board-stage-shell${presentMode ? " is-present" : ""}`} ref={boardStageRef}>
-      <div className="board-stage-wall" style={background.css} />
-      <div className="board-stage-overlay" />
-
-      {!presentMode && (
-        <>
-          <div className="floating-badge floating-badge-left">Interactive demo board</div>
-          <div className="floating-badge floating-badge-right">Hover mode on</div>
-        </>
-      )}
-
-      {presentMode && (
-        <div className="present-toolbar">
-          <button className="glass-button" onClick={togglePresentMode}>
-            Back to Site
-          </button>
-          <button className="glass-button" onClick={handleFullscreenToggle}>
-            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-          </button>
-          <button className="glass-button" onClick={handleCopyLink}>
-            Copy Link
-          </button>
-        </div>
-      )}
-
-      <div className="board-stage-content">
-        {!presentMode && (
-          <div className="board-stage-copy">
-            <p className="eyebrow">Live board editor</p>
-            <h2>Click any tile. Type immediately. Save the screen when it feels right.</h2>
-            <p>
-              The board is the product. Every flap is clickable, keyboard capture advances tile by tile, and saved scenes let you build a library for home, retail, and events.
-            </p>
-          </div>
-        )}
-
-        <div className={`vb-frame frame-${frameStyle}`}>
-          <div className="vb-board-body">
-            <div className="vb-board" role="img" aria-label="Interactive digital split flap board">
-              {grid.map((row, rowIndex) => (
-                <div className="vb-row" key={rowIndex}>
-                  {row.map((cell, columnIndex) => (
-                    <SplitFlap
-                      key={`${rowIndex}-${columnIndex}`}
-                      targetChar={cell.char}
-                      color={cell.color}
-                      delay={columnIndex * STAGGER_COL + rowIndex * STAGGER_ROW}
-                      hoverActive={hoverMode}
-                      selected={activeCell?.row === rowIndex && activeCell?.col === columnIndex}
-                      onSelect={() => selectTile(rowIndex, columnIndex)}
-                      onDoubleClick={() => openComposerForTile(rowIndex, columnIndex)}
-                      label={`Row ${rowIndex + 1} column ${columnIndex + 1} ${describeCell(cell)}`}
-                    />
-                  ))}
-                </div>
+  const boardContent = (
+    <div className="vb-frame frame-black">
+      <div className="vb-board-body">
+        <div className="vb-board" role="img" aria-label="Interactive digital split flap board">
+          {grid.map((row, rowIndex) => (
+            <div className="vb-row" key={rowIndex}>
+              {row.map((cell, columnIndex) => (
+                <SplitFlap
+                  key={`${rowIndex}-${columnIndex}`}
+                  targetChar={cell.char}
+                  color={cell.color}
+                  delay={columnIndex * STAGGER_COL + rowIndex * STAGGER_ROW}
+                  hoverActive={hoverMode}
+                  selected={activeCell?.row === rowIndex && activeCell?.col === columnIndex}
+                  onSelect={() => selectTile(rowIndex, columnIndex)}
+                  onDoubleClick={() => openComposerForTile(rowIndex, columnIndex)}
+                  label={`Row ${rowIndex + 1} column ${columnIndex + 1} ${describeCell(cell)}`}
+                />
               ))}
             </div>
-          </div>
+          ))}
         </div>
-
-        {!presentMode && (
-          <div className="board-instruction-bar">
-            <span>{selectedLabel}</span>
-            {activeCell ? (
-              <>
-                <span>Type to enter characters. Arrow keys to navigate.</span>
-                <span className="instruction-action" onClick={() => setComposerOpen(true)} role="button" tabIndex={0}>Open Tile Picker</span>
-              </>
-            ) : (
-              <span>Click any tile to start typing</span>
-            )}
-          </div>
-        )}
       </div>
-
-      {presentMode && (
-        <div className="present-exit-dock">
-          <button className="present-exit-button" onClick={togglePresentMode}>
-            Back to Site
-          </button>
-          <span>Press Esc to exit display mode.</span>
-        </div>
-      )}
     </div>
   );
 
   if (presentMode) {
     return (
       <div className="app-shell is-present">
-        {boardMarkup}
+        <div className="board-stage-shell is-present" ref={boardRef}>
+          <div className="board-stage-wall" style={background.css} />
+          <div className="board-stage-overlay" />
+          <div className="present-toolbar">
+            <button className="glass-button" onClick={togglePresent}>Back to Site</button>
+            <button className="glass-button" onClick={handleFullscreen}>
+              {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+            </button>
+            <button className="glass-button" onClick={handleCopyLink}>Copy Link</button>
+          </div>
+          <div className="board-stage-content">
+            {boardContent}
+          </div>
+          <div className="present-exit-dock">
+            <button className="present-exit-button" onClick={togglePresent}>Exit Display</button>
+            <span>Press Esc to exit</span>
+          </div>
+        </div>
         {composerOpen && activeCell && selectedCell && (
           <ComposerModal
             position={activeCell}
@@ -1300,276 +1205,157 @@ export default function DigitalVestaboard() {
 
   return (
     <div className="app-shell">
-      <div className="ambient-glow ambient-glow-left" />
-      <div className="ambient-glow ambient-glow-right" />
-
       <header className="site-nav animate-in">
         <div className="brand-lockup">
           <span className="brand-mark">FB</span>
-          <div>
-            <strong>Flippy Bord</strong>
-            <span>Digital split-flap display</span>
-          </div>
+          <strong>Flippy Bord</strong>
         </div>
-
         <div className="nav-actions">
-          <button className="ghost-button" onClick={scrollToSavedScreens}>
-            Saved Screens
-          </button>
+          <button className="nav-link" onClick={scrollToSaved}>Screens</button>
           <button className="primary-button" onClick={startEditing}>
-            Start Creating
+            <span>Start Creating</span>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12" />
+              <polyline points="12 5 19 12 12 19" />
+            </svg>
           </button>
         </div>
       </header>
 
-      <main className="landing-shell">
-        <section className="hero-grid animate-in">
-          <div className="hero-copy">
-            <p className="eyebrow">Vestaboard-inspired browser signage</p>
-            <h1>The split-flap board <span className="gradient-text">you can touch.</span></h1>
-            <p className="hero-text">
-              Click any tile and start typing. Every letter flips into place with mechanical precision. No hardware required — just a browser and something worth saying.
-            </p>
-
-            <div className="hero-actions">
-              <button className="primary-button" onClick={startEditing}>
-                <span>Start Creating</span>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-              </button>
-              <button className="secondary-button" onClick={togglePresentMode}>
-                Display Mode
-              </button>
-            </div>
-
-            <div className="metric-strip">
-              <div className="metric-card">
-                <strong>132</strong>
-                <span>Clickable flaps</span>
-              </div>
-              <div className="metric-card">
-                <strong>Inline</strong>
-                <span>Click & type editing</span>
-              </div>
-              <div className="metric-card">
-                <strong>Scenes</strong>
-                <span>Save & share boards</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="hero-board">{boardMarkup}</div>
+      <main>
+        <section className="hero animate-in">
+          <p className="hero-eyebrow">Digital split-flap display</p>
+          <h1>The board <span className="gradient-text">you can touch.</span></h1>
+          <p className="hero-subtitle">Click any tile. Start typing. Watch every letter flip into place.</p>
         </section>
 
-        <section className="studio-grid animate-in delay-1">
-          <article className="panel-card panel-tall">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Control deck</p>
-                <h3>Board access</h3>
-              </div>
-            </div>
-
-            <div className="button-cluster">
-              <button className="secondary-button" onClick={handleCopyLink}>
-                Copy Display Link
-              </button>
-              <button className="secondary-button" onClick={handleFullscreenToggle}>
-                {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
-              </button>
-              <button className="secondary-button" onClick={clearBoard}>
-                Clear Board
-              </button>
-              <button className="secondary-button" onClick={togglePresentMode}>
-                Enter Display Mode
-              </button>
-            </div>
-
-            <div className="option-stack">
-              <div className="option-group">
-                <span className="field-label">Wall</span>
-                <div className="chip-grid">
-                  {BACKGROUNDS.map((entry) => (
-                    <button
-                      key={entry.id}
-                      className={`chip-button${bgId === entry.id ? " active" : ""}`}
-                      onClick={() => setBgId(entry.id)}
-                    >
-                      {entry.label}
-                    </button>
-                  ))}
+        <section className="board-section animate-in delay-1">
+          <div className="board-stage-shell" ref={boardRef}>
+            <div className="board-stage-wall" style={background.css} />
+            <div className="board-stage-overlay" />
+            <div className="board-stage-content">
+              {boardContent}
+              {activeCell && (
+                <div className="board-status">
+                  <span className="status-cell">R{activeCell.row + 1} · C{activeCell.col + 1}{selectedCell && selectedCell.char !== " " ? ` · ${describeCell(selectedCell)}` : ""}</span>
+                  <span className="status-divider" />
+                  <span className="status-hint">Type to enter · Arrows to move · Esc to deselect</span>
                 </div>
-              </div>
-
-              <div className="option-group">
-                <span className="field-label">Frame</span>
-                <div className="chip-grid compact">
-                  <button className={`chip-button${frameStyle === "black" ? " active" : ""}`} onClick={() => setFrameStyle("black")}>
-                    Black
-                  </button>
-                  <button className={`chip-button${frameStyle === "white" ? " active" : ""}`} onClick={() => setFrameStyle("white")}>
-                    White
-                  </button>
-                </div>
-              </div>
+              )}
             </div>
+          </div>
+        </section>
 
-            <div className="toggle-row">
-              <button className={`icon-toggle${soundOn ? " active" : ""}`} onClick={() => setSoundOn((current) => !current)}>
+        <section className="toolbar animate-in delay-1">
+          <div className="toolbar-inner">
+            <div className="toolbar-group">
+              <button className={`tool-btn${soundOn ? " active" : ""}`} onClick={() => setSoundOn((v) => !v)} title={soundOn ? "Mute sound" : "Enable sound"}>
                 <ToggleIcon enabled={soundOn} />
-                <span>Mechanical sound</span>
               </button>
-              <button className={`icon-toggle${hoverMode ? " active accent" : ""}`} onClick={() => setHoverMode((current) => !current)}>
+              <button className={`tool-btn${hoverMode ? " active" : ""}`} onClick={() => setHoverMode((v) => !v)} title={hoverMode ? "Disable hover effect" : "Enable hover effect"}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M4 4l7.07 17 2.51-7.39L21 11.07z" />
                 </svg>
-                <span>Cursor hover effect</span>
+              </button>
+              <span className="toolbar-sep" />
+              <button className="tool-btn" onClick={clearBoard} title="Clear board">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                </svg>
               </button>
             </div>
-
-            <p className={`panel-note${isDarkWall ? " note-light" : ""}`}>
-              Click any tile and start typing. Characters advance automatically. Double-click a tile for the full picker with colors and symbols.
-            </p>
-
-            <div className="save-card">
-              <div className="section-heading tight">
-                <div>
-                  <p className="eyebrow">Save scene</p>
-                  <h3>Store this board</h3>
-                </div>
-              </div>
-              <div className="save-row">
-                <input
-                  className="save-input"
-                  value={saveName}
-                  onChange={(event) => setSaveName(event.target.value)}
-                  placeholder="Night menu, launch screen, front door..."
-                />
-                <button className="primary-button" onClick={saveScreen}>
-                  Save Screen
-                </button>
-              </div>
+            <div className="toolbar-group save-group">
+              <input
+                className="toolbar-input"
+                value={saveName}
+                onChange={(event) => setSaveName(event.target.value)}
+                placeholder="Scene name..."
+                onKeyDown={(event) => { if (event.key === "Enter") saveScreen(); }}
+              />
+              <button className="primary-button compact" onClick={saveScreen}>Save</button>
             </div>
-          </article>
-
-          <article className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Tile focus</p>
-                <h3>{selectedLabel}</h3>
-              </div>
+            <div className="toolbar-group">
+              <button className="tool-btn" onClick={togglePresent} title="Enter display mode">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </button>
+              <button className="tool-btn" onClick={handleCopyLink} title="Copy display link">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+                </svg>
+              </button>
+              <button className="tool-btn" onClick={handleFullscreen} title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+                </svg>
+              </button>
             </div>
-
-            {selectedCell ? (
-              <>
-                <p className="panel-note">
-                  Current tile: <strong>{describeCell(selectedCell)}</strong>. Just type on your keyboard to enter characters. Arrow keys move between tiles, paste works too.
-                </p>
-                <div className="composer-shortcuts">
-                  <button className="secondary-button" onClick={() => setComposerOpen(true)}>
-                    Open Tile Picker
-                  </button>
-                  <button className="secondary-button" onClick={() => insertCharacterAtCursor(" ")}>
-                    Insert Blank
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="empty-state">
-                <strong>Click any tile to begin.</strong>
-                <span>Select a tile on the board and start typing. Double-click for the full tile picker with colors and symbols.</span>
-              </div>
-            )}
-
-            <div className="mini-feature-list">
-              <div>
-                <strong>Sequential typing</strong>
-                <span>Starts from the tile you clicked.</span>
-              </div>
-              <div>
-                <strong>Symbol support</strong>
-                <span>Numbers, punctuation, and blank flaps included.</span>
-              </div>
-              <div>
-                <strong>Signal tiles</strong>
-                <span>Drop colored flaps into the composition when needed.</span>
-              </div>
-            </div>
-          </article>
-
-          <article className="panel-card">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">Featured scenes</p>
-                <h3>Built to sell access</h3>
-              </div>
-            </div>
-
-            <div className="scene-list">
-              {featuredScenes.map((scene) => (
-                <div className="scene-card" key={scene.id}>
-                  <div>
-                    <strong>{scene.name}</strong>
-                    <p>{scene.blurb}</p>
-                  </div>
-                  <button className="secondary-button" onClick={() => loadScene(scene)}>
-                    Load Scene
-                  </button>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <section className="selling-grid animate-in delay-2">
-          <article className="marketing-card">
-            <div className="marketing-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-            </div>
-            <p className="eyebrow">Click & type</p>
-            <h3>Direct inline editing on every tile.</h3>
-            <p>
-              No forms, no modals by default. Click a flap, start typing, and watch each letter flip into place with satisfying mechanical precision.
-            </p>
-          </article>
-
-          <article className="marketing-card">
-            <div className="marketing-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
-            <p className="eyebrow">Display ready</p>
-            <h3>From browser to big screen in one click.</h3>
-            <p>
-              Switch to display mode and go fullscreen. The same board you designed becomes clean signage for TVs, lobbies, and events.
-            </p>
-          </article>
-
-          <article className="marketing-card">
-            <div className="marketing-icon">
-              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            </div>
-            <p className="eyebrow">Save & share</p>
-            <h3>Build a library of scenes you can reload anytime.</h3>
-            <p>
-              Save your favorite boards locally. Build a collection for home rituals, restaurant menus, event signage, and more.
-            </p>
-          </article>
-        </section>
-
-        <section className="saved-shell animate-in delay-3" ref={savedSectionRef}>
-          <div className="saved-header">
-            <div>
-              <p className="eyebrow">Saved screens</p>
-              <h2>Your board library</h2>
-            </div>
-            <button className="ghost-button" onClick={scrollToBoard}>
-              Back to Board
-            </button>
           </div>
+        </section>
 
+        <section className="scenes-section animate-in delay-2">
+          <div className="section-label">Featured scenes</div>
+          <div className="scenes-grid">
+            {featuredScenes.map((scene) => (
+              <button className="scene-card" key={scene.id} onClick={() => loadScene(scene)}>
+                <strong>{scene.name}</strong>
+                <span>{scene.blurb}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="features-section animate-in delay-2">
+          <div className="features-grid">
+            <article className="feature-card">
+              <div className="feature-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <path d="M3 9h18" />
+                  <path d="M9 21V9" />
+                </svg>
+              </div>
+              <h3>Click & type</h3>
+              <p>Click any tile and start typing. Characters advance automatically with satisfying mechanical flip animations.</p>
+            </article>
+            <article className="feature-card">
+              <div className="feature-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="3" width="20" height="14" rx="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </div>
+              <h3>Display ready</h3>
+              <p>Switch to display mode and go fullscreen. Your board becomes clean signage for TVs, lobbies, and events.</p>
+            </article>
+            <article className="feature-card">
+              <div className="feature-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+                  <polyline points="17 21 17 13 7 13 7 21" />
+                  <polyline points="7 3 7 8 15 8" />
+                </svg>
+              </div>
+              <h3>Save & share</h3>
+              <p>Save your boards locally. Build a collection for home rituals, restaurant menus, event signage, and more.</p>
+            </article>
+          </div>
+        </section>
+
+        <section className="saved-section animate-in delay-3" ref={savedSectionRef}>
+          <div className="saved-header">
+            <h2>Saved Screens</h2>
+            <button className="ghost-button" onClick={scrollToBoard}>Back to Board</button>
+          </div>
           {savedScreens.length === 0 ? (
-            <div className="empty-saved">
-              <strong>No saved screens yet.</strong>
-              <span>Build a board above, name it, and hit Save Screen to start collecting scenes.</span>
+            <div className="empty-state">
+              <p>No saved screens yet. Create a board and save it to start collecting scenes.</p>
             </div>
           ) : (
             <div className="saved-grid">
@@ -1583,12 +1369,8 @@ export default function DigitalVestaboard() {
                         <span>{formatTimestamp(screen.createdAt)}</span>
                       </div>
                       <div className="saved-card-actions">
-                        <button className="mini-button" onClick={() => loadSavedScreen(screen)}>
-                          Load
-                        </button>
-                        <button className="mini-button destructive" onClick={() => deleteSavedScreen(screen.id)}>
-                          Delete
-                        </button>
+                        <button className="mini-btn" onClick={() => loadSavedScreen(screen)}>Load</button>
+                        <button className="mini-btn destructive" onClick={() => deleteSavedScreen(screen.id)}>Delete</button>
                       </div>
                     </div>
                     <div className="saved-preview">
@@ -1602,18 +1384,11 @@ export default function DigitalVestaboard() {
         </section>
       </main>
 
-      <footer className="site-footer animate-in delay-3">
+      <footer className="site-footer">
         <div className="footer-inner">
-          <div className="footer-brand">
-            <span className="brand-mark">FB</span>
-            <span>Flippy Bord</span>
-          </div>
-          <p className="footer-tagline">A digital split-flap display for browsers, TVs, and phones. Click a tile, type your message, flip.</p>
-          <div className="footer-links">
-            <button className="footer-link" onClick={startEditing}>Start Creating</button>
-            <button className="footer-link" onClick={togglePresentMode}>Display Mode</button>
-            <button className="footer-link" onClick={scrollToSavedScreens}>Saved Screens</button>
-          </div>
+          <span className="footer-brand">Flippy Bord</span>
+          <span className="footer-sep">&middot;</span>
+          <span className="footer-text">Digital split-flap display</span>
         </div>
       </footer>
 
