@@ -8,13 +8,14 @@ const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 const NUMBERS = "1234567890".split("");
 const SYMBOLS = "!@#$()-+&=;:'\"%,./?°".split("");
 const COLOR_MAP = {
+  "{K}": "#1A1A1A",
+  "{W}": "#EEEAE2",
   "{R}": "#E8342C",
   "{O}": "#EF7D24",
   "{Y}": "#F5C829",
   "{G}": "#49A347",
   "{B}": "#2F73E0",
   "{V}": "#8B3FB8",
-  "{W}": "#EEEAE2",
 };
 const STORAGE_KEY = "flippybord-state-v3";
 const SAVED_SCREENS_KEY = "flippybord-saved-screens-v1";
@@ -33,30 +34,78 @@ const BACKGROUNDS = [
   },
 ];
 
-const FEATURED_SCENES = [
+const SCENE_TEMPLATES = [
   {
-    id: "lobby",
-    name: "Lobby Welcome",
-    blurb: "Hospitality arrivals and concierge moments.",
-    message: "GOOD EVENING\nCHECK IN AT 4\nLOBBY BAR OPEN",
-    background: "gallery-plaster",
-    frame: "black",
+    id: "weather",
+    name: "Weather",
+    blurb: "Local forecast at a glance.",
+    message: "{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}\nNEW YORK  {Y}{Y} 72°F\n{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}\nSUNNY   HI 78  LO 61\nWED 74  THU 69  FRI 75\n{G}HUMIDITY 45%  UV 6",
   },
   {
-    id: "launch",
-    name: "Launch Night",
-    blurb: "Retail drops, openings, and release countdowns.",
-    message: "LAUNCH NIGHT\nDOORS AT 8 PM\nSEE YOU INSIDE",
-    background: "gallery-plaster",
-    frame: "black",
+    id: "stocks",
+    name: "Markets",
+    blurb: "Live tickers and indices.",
+    message: "MARKETS    APR 6 2026\n{G}S&P 500   5842 +1.2%\n{G}NASDAQ   18407 +0.9%\n{R}DOW      42190 -0.3%\nAAPL 228   TSLA  412\nGOOG 191   AMZN  224",
   },
   {
-    id: "home",
-    name: "Home Ritual",
-    blurb: "A calmer board for kitchens, hallways, and studios.",
-    message: "DINNER AT 7\nDOG WALK AT 8\nMOVIE NIGHT",
-    background: "gallery-plaster",
-    frame: "black",
+    id: "sports",
+    name: "Scores",
+    blurb: "Game day results and standings.",
+    message: "{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}\nNBA PLAYOFFS\n{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}\nCELTICS 112 KNICKS 104\nLAKERS  98 NUGGETS 105\nGAME 3   TONIGHT 8PM",
+  },
+  {
+    id: "calendar",
+    name: "Calendar",
+    blurb: "Your schedule for the day.",
+    message: "MONDAY  APRIL 6\n{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}\n 9AM  TEAM STANDUP\n11AM  DESIGN REVIEW\n 1PM  LUNCH WITH ALEX\n 4PM  SHIP V2 LAUNCH",
+  },
+  {
+    id: "arrivals",
+    name: "Arrivals",
+    blurb: "Flight board for lobbies and offices.",
+    message: "ARRIVALS         JFK\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\nAA 412  LAX  {G}ON TIME\nUA 889  SFO  {Y}DELAYED\nDL 204  ATL  {G}LANDED\nBA 178  LHR  {G}ON TIME",
+  },
+  {
+    id: "countdown",
+    name: "Countdown",
+    blurb: "Days until your next milestone.",
+    message: "{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}\n\n    42 DAYS UNTIL\n      LAUNCH\n\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}",
+  },
+  {
+    id: "crypto",
+    name: "Crypto",
+    blurb: "Top coins and market sentiment.",
+    message: "{Y}CRYPTO     LIVE\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\n{G}BTC    $68,420 +2.4%\n{R}ETH     $3,812 -0.8%\n{G}SOL       $178 +5.1%\nFEAR & GREED    72",
+  },
+  {
+    id: "recipe",
+    name: "Dinner Menu",
+    blurb: "Tonight's meal on the board.",
+    message: "{O}{O}{O} TONIGHTS MENU {O}{O}{O}\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\n PASTA CARBONARA\n CAESAR SALAD\n GARLIC BREAD\n{G}READY AT 7:30 PM",
+  },
+  {
+    id: "quote",
+    name: "Daily Quote",
+    blurb: "Inspiration front and center.",
+    message: "\n{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}\nTHE BEST WAY TO\nPREDICT THE FUTURE\nIS TO CREATE IT\n{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}",
+  },
+  {
+    id: "gym",
+    name: "Workout",
+    blurb: "Today's lifts and sets.",
+    message: "{G}TODAYS WORKOUT\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\nSQUATS     5 X 5\nBENCH      5 X 5\nROWS       5 X 5\n{R}REST 90S BETWEEN",
+  },
+  {
+    id: "birthday",
+    name: "Birthday",
+    blurb: "Celebrate with a colorful splash.",
+    message: "{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}\n\n  HAPPY BIRTHDAY!\n\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}",
+  },
+  {
+    id: "office",
+    name: "Office Info",
+    blurb: "WiFi, rooms, and daily updates.",
+    message: "WIFI: LOBBY-GUEST\nPASS: WELCOME2026\n{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}\nMEETING RM A  {G}OPEN\nMEETING RM B  {R}BUSY\nKITCHEN RESTOCK 3PM",
   },
 ];
 
@@ -357,15 +406,20 @@ function decodeData(value) {
 }
 
 const COLOR_VALUES = Object.values(COLOR_MAP);
+const CHAR_COUNT = CHARS.length; // 57
 
 function encodeGridCompact(grid) {
   const cells = [];
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
       const cell = grid[r][c];
-      const charIdx = CHARS.indexOf(cell.char) >= 0 ? CHARS.indexOf(cell.char) : 0;
-      const colorIdx = cell.color ? COLOR_VALUES.indexOf(cell.color) + 1 : 0;
-      cells.push(charIdx * 8 + colorIdx);
+      if (cell.color) {
+        const ci = COLOR_VALUES.indexOf(cell.color);
+        cells.push(CHAR_COUNT + (ci >= 0 ? ci : 0));
+      } else {
+        const idx = CHARS.indexOf(cell.char);
+        cells.push(idx >= 0 ? idx : 0);
+      }
     }
   }
 
@@ -386,11 +440,14 @@ function decodeGridCompact(encoded) {
     const grid = emptyGrid();
     for (let i = 0; i < CELL_COUNT; i++) {
       const val = bytes[i];
-      const charIdx = Math.floor(val / 8);
-      const colorIdx = val % 8;
-      const char = charIdx < CHARS.length ? CHARS[charIdx] : " ";
-      const color = colorIdx > 0 && colorIdx <= COLOR_VALUES.length ? COLOR_VALUES[colorIdx - 1] : null;
-      grid[Math.floor(i / COLS)][i % COLS] = createCell(color ? " " : char, color);
+      if (val >= CHAR_COUNT) {
+        const colorIdx = val - CHAR_COUNT;
+        const color = colorIdx < COLOR_VALUES.length ? COLOR_VALUES[colorIdx] : null;
+        grid[Math.floor(i / COLS)][i % COLS] = createCell(" ", color);
+      } else {
+        const char = val < CHARS.length ? CHARS[val] : " ";
+        grid[Math.floor(i / COLS)][i % COLS] = createCell(char, null);
+      }
     }
     return { grid };
   } catch {
@@ -925,7 +982,7 @@ function ComposerPanel({ cell, onClose, onPickCharacter, onPickBlank, onPickColo
 
 export default function DigitalVestaboard() {
   const initialState = useMemo(readInitialState, []);
-  const featuredScenes = useMemo(() => FEATURED_SCENES.map(buildFeaturedScene), []);
+  const sceneTemplates = useMemo(() => SCENE_TEMPLATES.map(buildFeaturedScene), []);
   const [grid, setGrid] = useState(initialState.grid);
   const [soundOn, setSoundOn] = useState(initialState.sound);
   const [hoverMode, setHoverMode] = useState(initialState.hover);
@@ -1577,12 +1634,17 @@ export default function DigitalVestaboard() {
         </section>
 
         <section className="scenes-section animate-in delay-2">
-          <div className="section-label">Featured scenes</div>
+          <div className="section-label">Scene templates</div>
           <div className="scenes-grid">
-            {featuredScenes.map((scene) => (
+            {sceneTemplates.map((scene) => (
               <button className="scene-card" key={scene.id} onClick={() => loadScene(scene)}>
-                <strong>{scene.name}</strong>
-                <span>{scene.blurb}</span>
+                <div className="scene-card-preview">
+                  <MiniBoard grid={scene.grid} />
+                </div>
+                <div className="scene-card-info">
+                  <strong>{scene.name}</strong>
+                  <span>{scene.blurb}</span>
+                </div>
               </button>
             ))}
           </div>
