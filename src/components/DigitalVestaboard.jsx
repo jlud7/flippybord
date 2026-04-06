@@ -38,74 +38,42 @@ const SCENE_TEMPLATES = [
   {
     id: "weather",
     name: "Weather",
-    blurb: "Local forecast at a glance.",
-    message: "{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}\nNEW YORK  {Y}{Y} 72°F\n{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}\nSUNNY   HI 78  LO 61\nWED 74  THU 69  FRI 75\n{G}HUMIDITY 45%  UV 6",
+    message: "\nNEW YORK       72°F\nSUNNY\n\nWED 74 THU 69 FRI 75\n{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}",
   },
   {
     id: "stocks",
     name: "Markets",
-    blurb: "Live tickers and indices.",
-    message: "MARKETS    APR 6 2026\n{G}S&P 500   5842 +1.2%\n{G}NASDAQ   18407 +0.9%\n{R}DOW      42190 -0.3%\nAAPL 228   TSLA  412\nGOOG 191   AMZN  224",
+    message: "\nS&P 500        {G}+1.2%\nNASDAQ         {G}+0.9%\nDOW JONES      {R}-0.3%\n\nAAPL 228     TSLA 412",
   },
   {
     id: "sports",
     name: "Scores",
-    blurb: "Game day results and standings.",
-    message: "{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}\nNBA PLAYOFFS\n{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}{O}\nCELTICS 112 KNICKS 104\nLAKERS  98 NUGGETS 105\nGAME 3   TONIGHT 8PM",
+    message: "{O} NBA PLAYOFFS\n\nCELTICS          112\nKNICKS           104\n\nGAME 3  TONIGHT 8PM",
   },
   {
     id: "calendar",
     name: "Calendar",
-    blurb: "Your schedule for the day.",
-    message: "MONDAY  APRIL 6\n{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}{V}\n 9AM  TEAM STANDUP\n11AM  DESIGN REVIEW\n 1PM  LUNCH WITH ALEX\n 4PM  SHIP V2 LAUNCH",
+    message: "MONDAY  APRIL 6\n\n 9AM TEAM STANDUP\n11AM DESIGN REVIEW\n 1PM LUNCH W/ ALEX\n 4PM SHIP V2 {G}{G}",
   },
   {
     id: "arrivals",
     name: "Arrivals",
-    blurb: "Flight board for lobbies and offices.",
-    message: "ARRIVALS         JFK\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\nAA 412  LAX  {G}ON TIME\nUA 889  SFO  {Y}DELAYED\nDL 204  ATL  {G}LANDED\nBA 178  LHR  {G}ON TIME",
+    message: "ARRIVALS        JFK\n\nAA 412 LAX {G}ON TIME\nUA 889 SFO  {Y}DELAY\nDL 204 ATL {G}LANDED\nBA 178 LHR {G}ON TIME",
   },
   {
     id: "countdown",
     name: "Countdown",
-    blurb: "Days until your next milestone.",
-    message: "{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}\n\n    42 DAYS UNTIL\n      LAUNCH\n\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}",
-  },
-  {
-    id: "crypto",
-    name: "Crypto",
-    blurb: "Top coins and market sentiment.",
-    message: "{Y}CRYPTO     LIVE\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\n{G}BTC    $68,420 +2.4%\n{R}ETH     $3,812 -0.8%\n{G}SOL       $178 +5.1%\nFEAR & GREED    72",
-  },
-  {
-    id: "recipe",
-    name: "Dinner Menu",
-    blurb: "Tonight's meal on the board.",
-    message: "{O}{O}{O} TONIGHTS MENU {O}{O}{O}\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\n PASTA CARBONARA\n CAESAR SALAD\n GARLIC BREAD\n{G}READY AT 7:30 PM",
+    message: "\n\n42 DAYS\nUNTIL LAUNCH\n\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}",
   },
   {
     id: "quote",
     name: "Daily Quote",
-    blurb: "Inspiration front and center.",
-    message: "\n{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}\nTHE BEST WAY TO\nPREDICT THE FUTURE\nIS TO CREATE IT\n{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}{W}",
+    message: "\n\nTHE BEST WAY TO\nPREDICT THE FUTURE\nIS TO CREATE IT\n",
   },
   {
-    id: "gym",
-    name: "Workout",
-    blurb: "Today's lifts and sets.",
-    message: "{G}TODAYS WORKOUT\n{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}{K}\nSQUATS     5 X 5\nBENCH      5 X 5\nROWS       5 X 5\n{R}REST 90S BETWEEN",
-  },
-  {
-    id: "birthday",
-    name: "Birthday",
-    blurb: "Celebrate with a colorful splash.",
-    message: "{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}{Y}\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}\n\n  HAPPY BIRTHDAY!\n\n{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}{R}",
-  },
-  {
-    id: "office",
-    name: "Office Info",
-    blurb: "WiFi, rooms, and daily updates.",
-    message: "WIFI: LOBBY-GUEST\nPASS: WELCOME2026\n{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}{B}\nMEETING RM A  {G}OPEN\nMEETING RM B  {R}BUSY\nKITCHEN RESTOCK 3PM",
+    id: "menu",
+    name: "Dinner Menu",
+    message: "{O} TONIGHTS MENU\n\nPASTA CARBONARA\nCAESAR SALAD\nGARLIC BREAD\nREADY AT 7:30",
   },
 ];
 
@@ -1643,7 +1611,6 @@ export default function DigitalVestaboard() {
                 </div>
                 <div className="scene-card-info">
                   <strong>{scene.name}</strong>
-                  <span>{scene.blurb}</span>
                 </div>
               </button>
             ))}

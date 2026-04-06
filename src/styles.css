@@ -785,54 +785,47 @@ h3 {
 
 .scenes-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
 }
 
 .scene-card {
   text-align: left;
   padding: 0;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  backdrop-filter: blur(24px);
-  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
   cursor: pointer;
   transition: all 0.2s ease;
   overflow: hidden;
 }
 
 .scene-card:hover {
-  background: var(--surface-hover);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.07);
+  border-color: rgba(90, 143, 123, 0.4);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
 }
 
 .scene-card-preview {
-  padding: 10px 10px 0;
-  border-radius: 10px 10px 0 0;
+  padding: 8px 8px 6px;
   background: #1a1a1a;
 }
 
 .scene-card-preview .mini-board {
-  transform: scale(1);
+  margin-top: 0;
+  padding: 4px;
+  border-radius: 4px;
 }
 
 .scene-card-info {
-  padding: 12px 14px;
+  padding: 8px 10px;
 }
 
 .scene-card-info strong {
   display: block;
   color: var(--ink);
-  font-size: 0.9rem;
-  margin-bottom: 2px;
-}
-
-.scene-card-info span {
-  color: var(--ink-tertiary);
   font-size: 0.78rem;
-  line-height: 1.4;
+  font-weight: 600;
 }
 
 /* ─── Features ─── */
@@ -1223,7 +1216,10 @@ h3 {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .features-grid,
+  .features-grid {
+    grid-template-columns: 1fr;
+  }
+
   .saved-grid {
     grid-template-columns: 1fr;
   }
