@@ -370,6 +370,7 @@ h3 {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  user-select: none;
 }
 
 .vb-row {
@@ -385,6 +386,16 @@ h3 {
   flex-shrink: 0;
   cursor: text;
   outline: none;
+}
+
+.flap-unit.is-in-range::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  border-radius: 4px;
+  background: rgba(90, 143, 123, 0.15);
+  border: 1.5px solid rgba(90, 143, 123, 0.5);
+  pointer-events: none;
 }
 
 .flap-unit.is-selected::after {
@@ -662,6 +673,13 @@ h3 {
   color: var(--accent);
 }
 
+.tool-btn.disabled,
+.tool-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}
+
 .toolbar-input {
   flex: 1;
   min-width: 0;
@@ -681,6 +699,63 @@ h3 {
 
 .toolbar-input:focus {
   border-color: rgba(90, 143, 123, 0.5);
+}
+
+/* ─── Message mode ─── */
+
+.message-mode-panel {
+  max-width: 540px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.message-mode-inner {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+}
+
+.message-mode-label {
+  display: block;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-tertiary);
+  margin-bottom: 8px;
+  font-weight: 600;
+}
+
+.message-mode-textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: rgba(255, 252, 245, 0.6);
+  color: var(--ink);
+  font-family: "SF Mono", "Fira Code", "Fira Mono", monospace;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s ease;
+  box-sizing: border-box;
+}
+
+.message-mode-textarea::placeholder {
+  color: var(--ink-tertiary);
+}
+
+.message-mode-textarea:focus {
+  border-color: rgba(90, 143, 123, 0.5);
+}
+
+.message-mode-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 10px;
 }
 
 /* ─── Scenes ─── */

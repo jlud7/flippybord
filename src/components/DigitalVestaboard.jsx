@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 const ROWS = 6;
 const COLS = 22;
@@ -474,7 +474,73 @@ function describeCell(cell) {
   return cell.char === " " ? "Blank" : cell.char;
 }
 
-function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, label }) {
+function getSelectionRange(start, end) {
+  if (!start || !end) return null;
+  const minRow = Math.min(start.row, end.row);
+  const maxRow = Math.max(start.row, end.row);
+  const minCol = Math.min(start.col, end.col);
+  const maxCol = Math.max(start.col, end.col);
+  return { minRow, maxRow, minCol, maxCol };
+}
+
+function isInRange(row, col, range) {
+  if (!range) return false;
+  return row >= range.minRow && row <= range.maxRow && col >= range.minCol && col <= range.maxCol;
+}
+
+function gridsEqual(a, b) {
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      if (a[r][c].char !== b[r][c].char || a[r][c].color !== b[r][c].color) return false;
+    }
+  }
+  return true;
+}
+
+const MAX_UNDO = 50;
+
+function useUndoHistory(grid, setGrid) {
+  const undoStack = useRef([]);
+  const redoStack = useRef([]);
+  const lastSnapshot = useRef(grid);
+
+  const snapshot = useCallback(() => {
+    if (!gridsEqual(lastSnapshot.current, grid)) {
+      undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), cloneGrid(lastSnapshot.current)];
+      redoStack.current = [];
+      lastSnapshot.current = cloneGrid(grid);
+    }
+  }, [grid]);
+
+  useEffect(() => {
+    snapshot();
+  }, [snapshot]);
+
+  const undo = useCallback(() => {
+    if (undoStack.current.length === 0) return false;
+    redoStack.current = [...redoStack.current, cloneGrid(grid)];
+    const prev = undoStack.current.pop();
+    lastSnapshot.current = cloneGrid(prev);
+    setGrid(prev);
+    return true;
+  }, [grid, setGrid]);
+
+  const redo = useCallback(() => {
+    if (redoStack.current.length === 0) return false;
+    undoStack.current = [...undoStack.current, cloneGrid(grid)];
+    const next = redoStack.current.pop();
+    lastSnapshot.current = cloneGrid(next);
+    setGrid(next);
+    return true;
+  }, [grid, setGrid]);
+
+  const canUndo = undoStack.current.length > 0;
+  const canRedo = redoStack.current.length > 0;
+
+  return { undo, redo, canUndo, canRedo };
+}
+
+function SplitFlap({ targetChar, delay, color, hoverActive, selected, inRange, onSelect, onDragStart, onDragOver, label }) {
   const [currentChar, setCurrentChar] = useState(" ");
   const [currentColor, setCurrentColor] = useState(null);
   const [flipping, setFlipping] = useState(false);
@@ -665,8 +731,9 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, onSelect, 
 
   return (
     <div
-      className={`flap-unit${selected ? " is-selected" : ""}`}
-      onMouseEnter={handleHover}
+      className={`flap-unit${selected ? " is-selected" : ""}${inRange ? " is-in-range" : ""}`}
+      onMouseEnter={(e) => { handleHover(); onDragOver?.(e); }}
+      onMouseDown={onDragStart}
       onClick={onSelect}
       onKeyDown={(event) => {
         if (event.key === "Enter") {
@@ -812,11 +879,17 @@ export default function DigitalVestaboard() {
   const [saveName, setSaveName] = useState("");
   const [toast, setToast] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [messageMode, setMessageMode] = useState(false);
+  const [messageText, setMessageText] = useState("");
+  const [dragStart, setDragStart] = useState(null);
+  const [dragEnd, setDragEnd] = useState(null);
+  const isDragging = useRef(false);
 
   const boardRef = useRef(null);
   const savedSectionRef = useRef(null);
 
   const background = BACKGROUNDS[0];
+  const { undo, redo, canUndo, canRedo } = useUndoHistory(grid, setGrid);
   const selectedCell = activeCell ? grid[activeCell.row][activeCell.col] : null;
 
   useEffect(() => {
@@ -879,6 +952,17 @@ export default function DigitalVestaboard() {
         return;
       }
 
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+        const target = event.target;
+        if (target instanceof HTMLElement &&
+          (["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName) || target.isContentEditable)) {
+          return;
+        }
+        event.preventDefault();
+        if (event.shiftKey) { redo(); } else { undo(); }
+        return;
+      }
+
       if (!activeCell) {
         return;
       }
@@ -931,14 +1015,28 @@ export default function DigitalVestaboard() {
         return;
       }
 
-      if (event.key === "Delete") {
+      if (event.key === "Delete" || event.key === "Backspace") {
         event.preventDefault();
-        setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell()));
-        return;
-      }
+        const range = getSelectionRange(dragStart, dragEnd);
+        if (range) {
+          setGrid((currentGrid) => {
+            const nextGrid = cloneGrid(currentGrid);
+            for (let r = range.minRow; r <= range.maxRow; r++) {
+              for (let c = range.minCol; c <= range.maxCol; c++) {
+                nextGrid[r][c] = createCell();
+              }
+            }
+            return nextGrid;
+          });
+          setActiveCell({ row: range.minRow, col: range.minCol });
+          clearSelection();
+          return;
+        }
 
-      if (event.key === "Backspace") {
-        event.preventDefault();
+        if (event.key === "Delete") {
+          setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell()));
+          return;
+        }
 
         if (selectedCell && (selectedCell.color || selectedCell.char !== " ")) {
           setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell()));
@@ -957,8 +1055,23 @@ export default function DigitalVestaboard() {
       }
 
       event.preventDefault();
-      setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(character, null)));
-      setActiveCell(advancePosition(activeCell));
+      const range = getSelectionRange(dragStart, dragEnd);
+      if (range) {
+        setGrid((currentGrid) => {
+          const nextGrid = cloneGrid(currentGrid);
+          for (let r = range.minRow; r <= range.maxRow; r++) {
+            for (let c = range.minCol; c <= range.maxCol; c++) {
+              nextGrid[r][c] = createCell(character, null);
+            }
+          }
+          return nextGrid;
+        });
+        setActiveCell({ row: range.minRow, col: range.maxCol + 1 < COLS ? range.maxCol + 1 : range.maxCol });
+        clearSelection();
+      } else {
+        setGrid((currentGrid) => setGridCell(currentGrid, activeCell, createCell(character, null)));
+        setActiveCell(advancePosition(activeCell));
+      }
     };
 
     const handlePaste = (event) => {
@@ -1011,7 +1124,7 @@ export default function DigitalVestaboard() {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("paste", handlePaste);
     };
-  }, [activeCell, composerOpen, presentMode, selectedCell]);
+  }, [activeCell, composerOpen, presentMode, selectedCell, undo, redo, dragStart, dragEnd]);
 
   const selectTile = (row, col) => {
     setActiveCell({ row, col });
@@ -1044,6 +1157,16 @@ export default function DigitalVestaboard() {
     setGrid(emptyGrid());
     setActiveCell(null);
     setComposerOpen(false);
+  };
+
+  const applyMessage = () => {
+    if (!messageText.trim()) return;
+    setGrid(centerMessage(messageText));
+    setMessageMode(false);
+    setMessageText("");
+    setActiveCell(null);
+    setComposerOpen(false);
+    setToast("Message applied");
   };
 
   const loadScene = (scene) => {
@@ -1132,7 +1255,44 @@ export default function DigitalVestaboard() {
     if (!event.target.closest(".flap-unit")) {
       setActiveCell(null);
       setComposerOpen(false);
+      setDragStart(null);
+      setDragEnd(null);
     }
+  };
+
+  const selectionRange = getSelectionRange(dragStart, dragEnd);
+
+  const handleTileDragStart = (row, col) => (event) => {
+    if (event.button !== 0) return;
+    isDragging.current = true;
+    setDragStart({ row, col });
+    setDragEnd({ row, col });
+    setActiveCell({ row, col });
+    setComposerOpen(true);
+  };
+
+  const handleTileDragOver = (row, col) => () => {
+    if (!isDragging.current) return;
+    setDragEnd({ row, col });
+  };
+
+  useEffect(() => {
+    const handleMouseUp = () => {
+      if (isDragging.current) {
+        isDragging.current = false;
+        if (dragStart && dragEnd && dragStart.row === dragEnd.row && dragStart.col === dragEnd.col) {
+          setDragStart(null);
+          setDragEnd(null);
+        }
+      }
+    };
+    window.addEventListener("mouseup", handleMouseUp);
+    return () => window.removeEventListener("mouseup", handleMouseUp);
+  }, [dragStart, dragEnd]);
+
+  const clearSelection = () => {
+    setDragStart(null);
+    setDragEnd(null);
   };
 
   const boardContent = (
@@ -1149,7 +1309,10 @@ export default function DigitalVestaboard() {
                   delay={columnIndex * STAGGER_COL + rowIndex * STAGGER_ROW}
                   hoverActive={hoverMode}
                   selected={activeCell?.row === rowIndex && activeCell?.col === columnIndex}
+                  inRange={isInRange(rowIndex, columnIndex, selectionRange)}
                   onSelect={() => selectTile(rowIndex, columnIndex)}
+                  onDragStart={handleTileDragStart(rowIndex, columnIndex)}
+                  onDragOver={handleTileDragOver(rowIndex, columnIndex)}
                   label={`Row ${rowIndex + 1} column ${columnIndex + 1} ${describeCell(cell)}`}
                 />
               ))}
@@ -1241,6 +1404,28 @@ export default function DigitalVestaboard() {
           />
         )}
 
+        {messageMode && (
+          <div className="message-mode-panel animate-in">
+            <div className="message-mode-inner">
+              <label className="message-mode-label">Type your message (up to {ROWS} lines, {COLS} chars wide)</label>
+              <textarea
+                className="message-mode-textarea"
+                rows={ROWS}
+                maxLength={ROWS * (COLS + 1)}
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                placeholder={"HELLO WORLD"}
+                autoFocus
+                onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); applyMessage(); } }}
+              />
+              <div className="message-mode-actions">
+                <button className="ghost-button" onClick={() => { setMessageMode(false); setMessageText(""); }}>Cancel</button>
+                <button className="primary-button compact" onClick={applyMessage} disabled={!messageText.trim()}>Apply to Board</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <section className="toolbar animate-in delay-1">
           <div className="toolbar-inner">
             <div className="toolbar-group">
@@ -1253,6 +1438,27 @@ export default function DigitalVestaboard() {
                 </svg>
               </button>
               <span className="toolbar-sep" />
+              <button className={`tool-btn${canUndo ? "" : " disabled"}`} onClick={undo} disabled={!canUndo} title="Undo (⌘Z)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="1 4 1 10 7 10" />
+                  <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                </svg>
+              </button>
+              <button className={`tool-btn${canRedo ? "" : " disabled"}`} onClick={redo} disabled={!canRedo} title="Redo (⌘⇧Z)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="23 4 23 10 17 10" />
+                  <path d="M20.49 15a9 9 0 1 1-2.13-9.36L23 10" />
+                </svg>
+              </button>
+              <span className="toolbar-sep" />
+              <button className={`tool-btn${messageMode ? " active" : ""}`} onClick={() => setMessageMode((v) => !v)} title="Message mode">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="17" y1="10" x2="3" y2="10" />
+                  <line x1="21" y1="6" x2="3" y2="6" />
+                  <line x1="21" y1="14" x2="3" y2="14" />
+                  <line x1="17" y1="18" x2="3" y2="18" />
+                </svg>
+              </button>
               <button className="tool-btn" onClick={clearBoard} title="Clear board">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="3 6 5 6 21 6" />
