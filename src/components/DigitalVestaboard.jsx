@@ -1128,8 +1128,15 @@ export default function DigitalVestaboard() {
     setComposerOpen(false);
   };
 
+  const handleBoardBackgroundClick = (event) => {
+    if (!event.target.closest(".flap-unit")) {
+      setActiveCell(null);
+      setComposerOpen(false);
+    }
+  };
+
   const boardContent = (
-    <div className="vb-frame frame-black">
+    <div className="vb-frame frame-black" onClick={handleBoardBackgroundClick}>
       <div className="vb-board-body">
         <div className="vb-board" role="img" aria-label="Interactive digital split flap board">
           {grid.map((row, rowIndex) => (
@@ -1348,7 +1355,7 @@ export default function DigitalVestaboard() {
           ) : (
             <div className="saved-grid">
               {savedScreens.map((screen) => (
-                <article className="saved-card" key={screen.id}>
+                <article className="saved-card saved-card-clickable" key={screen.id} onClick={(e) => { if (!e.target.closest(".saved-card-actions")) loadSavedScreen(screen); }}>
                   <div className="saved-card-head">
                     <div>
                       <strong>{screen.name}</strong>
