@@ -312,6 +312,10 @@ h3 {
 
 .board-stage-shell.is-present {
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   background: radial-gradient(circle at top, rgba(255,255,255,0.25), transparent 28%), linear-gradient(180deg, #f3e3cb 0%, #dcc5a8 100%);
 }
 
@@ -343,12 +347,22 @@ h3 {
   align-items: center;
   justify-content: center;
   gap: 20px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 0 12px;
+}
+
+.board-stage-shell.is-present .board-stage-content {
+  padding: 0 16px;
 }
 
 /* ─── Board frame & flaps ─── */
 
 .vb-frame {
   border-radius: 18px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .frame-black {
@@ -1030,15 +1044,17 @@ h3 {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 }
 
-.composer-panel-row {
+.qwerty-keyboard {
   display: flex;
-  gap: 24px;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
 }
 
-.composer-panel-row > .composer-section {
-  flex: 1;
-  min-width: 0;
+.qwerty-row {
+  display: flex;
+  gap: 4px;
+  justify-content: center;
 }
 
 .composer-close {
@@ -1074,7 +1090,7 @@ h3 {
 }
 
 .composer-section + .composer-section {
-  margin-top: 18px;
+  margin-top: 14px;
 }
 
 .composer-section-title {
@@ -1206,10 +1222,6 @@ h3 {
 
   .save-group {
     max-width: none;
-  }
-
-  .composer-panel-row {
-    flex-direction: column;
   }
 
   .palette-grid {

@@ -356,6 +356,48 @@ function decodeData(value) {
   }
 }
 
+const COLOR_VALUES = Object.values(COLOR_MAP);
+
+function encodeGridCompact(grid) {
+  const cells = [];
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const cell = grid[r][c];
+      const charIdx = CHARS.indexOf(cell.char) >= 0 ? CHARS.indexOf(cell.char) : 0;
+      const colorIdx = cell.color ? COLOR_VALUES.indexOf(cell.color) + 1 : 0;
+      cells.push(charIdx * 8 + colorIdx);
+    }
+  }
+
+  const bytes = new Uint8Array(cells);
+  let binary = "";
+  bytes.forEach((b) => { binary += String.fromCharCode(b); });
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+function decodeGridCompact(encoded) {
+  if (!encoded) return null;
+  try {
+    const padded = encoded.replace(/-/g, "+").replace(/_/g, "/");
+    const binary = atob(padded);
+    const bytes = Uint8Array.from(binary, (ch) => ch.charCodeAt(0));
+    if (bytes.length !== CELL_COUNT) return null;
+
+    const grid = emptyGrid();
+    for (let i = 0; i < CELL_COUNT; i++) {
+      const val = bytes[i];
+      const charIdx = Math.floor(val / 8);
+      const colorIdx = val % 8;
+      const char = charIdx < CHARS.length ? CHARS[charIdx] : " ";
+      const color = colorIdx > 0 && colorIdx <= COLOR_VALUES.length ? COLOR_VALUES[colorIdx - 1] : null;
+      grid[Math.floor(i / COLS)][i % COLS] = createCell(color ? " " : char, color);
+    }
+    return { grid };
+  } catch {
+    return null;
+  }
+}
+
 function readStoredState() {
   if (typeof window === "undefined") {
     return null;
@@ -405,7 +447,9 @@ function readInitialState() {
 
   const params = new URLSearchParams(window.location.search);
   const stored = readStoredState();
-  const queryPayload = decodeData(params.get("board"));
+  const compactPayload = decodeGridCompact(params.get("b"));
+  const legacyPayload = decodeData(params.get("board"));
+  const queryPayload = compactPayload ?? legacyPayload;
   const gridFromStoredMessage = stored?.message ? centerMessage(stored.message) : null;
 
   return {
@@ -414,18 +458,15 @@ function readInitialState() {
     frame: sanitizeFrame(params.get("frame") ?? stored?.frame ?? fallback.frame),
     sound: parseBoolean(params.get("sound"), stored?.sound ?? fallback.sound),
     hover: parseBoolean(params.get("hover"), stored?.hover ?? fallback.hover),
-    present: parseBoolean(params.get("display"), stored?.present ?? fallback.present),
+    present: parseBoolean(params.get("d") ?? params.get("display"), stored?.present ?? fallback.present),
   };
 }
 
 function buildShareUrl({ grid, background, frame, sound, hover, present }) {
   const url = new URL(window.location.href);
-  url.searchParams.set("board", encodeData({ grid }));
-  url.searchParams.set("bg", background);
-  url.searchParams.set("frame", frame);
-  url.searchParams.set("sound", sound ? "1" : "0");
-  url.searchParams.set("hover", hover ? "1" : "0");
-  url.searchParams.set("display", present ? "1" : "0");
+  url.search = "";
+  url.searchParams.set("b", encodeGridCompact(grid));
+  url.searchParams.set("d", present ? "1" : "0");
   return url.toString();
 }
 
@@ -620,7 +661,15 @@ function SplitFlap({ targetChar, delay, color, hoverActive, selected, inRange, o
           return;
         }
 
-        queueRef.current = [{ char: " ", color }];
+        const steps = [];
+        const startIdx = curColorRef.current ? 0 : getCharIndex(curCharRef.current);
+        const flipCount = 3 + Math.floor(Math.random() * 4);
+        for (let i = 1; i <= flipCount; i++) {
+          steps.push(CHARS[(startIdx + i) % CHARS.length]);
+        }
+        steps.push({ char: " ", color });
+
+        queueRef.current = steps;
         if (!animatingRef.current) {
           processQueueRef.current();
         }
@@ -802,56 +851,64 @@ function MiniBoard({ grid }) {
   );
 }
 
+const QWERTY_ROWS = [
+  "QWERTYUIOP".split(""),
+  "ASDFGHJKL".split(""),
+  "ZXCVBNM".split(""),
+];
+
 function ComposerPanel({ cell, onClose, onPickCharacter, onPickBlank, onPickColor }) {
   return (
     <div className="composer-panel">
       <div className="composer-panel-inner">
-        <div className="composer-panel-row">
-          <div className="composer-section">
-            <div className="composer-section-title"><span>Letters</span></div>
-            <div className="palette-grid letters">
-              {LETTERS.map((character) => (
-                <button
-                  key={character}
-                  className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
-                  onClick={() => onPickCharacter(character)}
-                >
-                  {character}
-                </button>
-              ))}
-            </div>
+        <div className="composer-section">
+          <div className="composer-section-title"><span>Letters</span></div>
+          <div className="qwerty-keyboard">
+            {QWERTY_ROWS.map((row, ri) => (
+              <div className="qwerty-row" key={ri}>
+                {row.map((character) => (
+                  <button
+                    key={character}
+                    className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
+                    onClick={() => onPickCharacter(character)}
+                  >
+                    {character}
+                  </button>
+                ))}
+              </div>
+            ))}
           </div>
+        </div>
 
-          <div className="composer-section">
-            <div className="composer-section-title"><span>Numbers & symbols</span></div>
-            <div className="palette-grid compact">
-              {[" ", ...NUMBERS, ...SYMBOLS].map((character) => (
-                <button
-                  key={character === " " ? "blank" : character}
-                  className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
-                  onClick={() => (character === " " ? onPickBlank() : onPickCharacter(character))}
-                >
-                  {character === " " ? "Blank" : character}
-                </button>
-              ))}
-            </div>
+        <div className="composer-section">
+          <div className="composer-section-title"><span>Numbers & symbols</span></div>
+          <div className="palette-grid compact">
+            {[" ", ...NUMBERS, ...SYMBOLS].map((character) => (
+              <button
+                key={character === " " ? "blank" : character}
+                className={`palette-chip${cell.char === character && !cell.color ? " active" : ""}`}
+                onClick={() => (character === " " ? onPickBlank() : onPickCharacter(character))}
+              >
+                {character === " " ? "Blank" : character}
+              </button>
+            ))}
           </div>
+        </div>
 
-          <div className="composer-section">
-            <div className="composer-section-title"><span>Colors</span></div>
-            <div className="color-palette">
-              {Object.entries(COLOR_MAP).map(([key, value]) => (
-                <button
-                  key={key}
-                  className={`color-picker${cell.color === value ? " active" : ""}`}
-                  style={{ background: value }}
-                  onClick={() => onPickColor(value)}
-                  title={key}
-                >
-                  {key[1]}
-                </button>
-              ))}
-            </div>
+        <div className="composer-section">
+          <div className="composer-section-title"><span>Colors</span></div>
+          <div className="color-palette">
+            {Object.entries(COLOR_MAP).map(([key, value]) => (
+              <button
+                key={key}
+                className={`color-picker${cell.color === value ? " active" : ""}`}
+                style={{ background: value }}
+                onClick={() => onPickColor(value)}
+                title={key}
+              >
+                {key[1]}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -887,6 +944,7 @@ export default function DigitalVestaboard() {
 
   const boardRef = useRef(null);
   const savedSectionRef = useRef(null);
+  const composerRef = useRef(null);
 
   const background = BACKGROUNDS[0];
   const { undo, redo, canUndo, canRedo } = useUndoHistory(grid, setGrid);
@@ -1295,6 +1353,21 @@ export default function DigitalVestaboard() {
     setDragEnd(null);
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!composerOpen && !activeCell) return;
+      const clickedBoard = boardRef.current?.contains(event.target);
+      const clickedComposer = composerRef.current?.contains(event.target);
+      if (!clickedBoard && !clickedComposer) {
+        setComposerOpen(false);
+        setActiveCell(null);
+        clearSelection();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [composerOpen, activeCell]);
+
   const boardContent = (
     <div className="vb-frame frame-black" onClick={handleBoardBackgroundClick}>
       <div className="vb-board-body">
@@ -1345,13 +1418,15 @@ export default function DigitalVestaboard() {
           </div>
         </div>
         {composerOpen && activeCell && selectedCell && (
-          <ComposerPanel
-            cell={selectedCell}
-            onClose={closeComposer}
-            onPickCharacter={insertCharacterAtCursor}
-            onPickBlank={() => insertCharacterAtCursor(" ")}
-            onPickColor={insertColorAtCursor}
-          />
+          <div ref={composerRef}>
+            <ComposerPanel
+              cell={selectedCell}
+              onClose={closeComposer}
+              onPickCharacter={insertCharacterAtCursor}
+              onPickBlank={() => insertCharacterAtCursor(" ")}
+              onPickColor={insertColorAtCursor}
+            />
+          </div>
         )}
         {toast && <div className="toast">{toast}</div>}
       </div>
@@ -1395,13 +1470,15 @@ export default function DigitalVestaboard() {
         </section>
 
         {composerOpen && activeCell && selectedCell && (
-          <ComposerPanel
-            cell={selectedCell}
-            onClose={closeComposer}
-            onPickCharacter={insertCharacterAtCursor}
-            onPickBlank={() => insertCharacterAtCursor(" ")}
-            onPickColor={insertColorAtCursor}
-          />
+          <div ref={composerRef}>
+            <ComposerPanel
+              cell={selectedCell}
+              onClose={closeComposer}
+              onPickCharacter={insertCharacterAtCursor}
+              onPickBlank={() => insertCharacterAtCursor(" ")}
+              onPickColor={insertColorAtCursor}
+            />
+          </div>
         )}
 
         {messageMode && (
